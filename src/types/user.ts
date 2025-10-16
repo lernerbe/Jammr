@@ -9,7 +9,7 @@ export interface UserProfile {
   bio: string;
   location: GeoPoint;
   audio_clips: string[];
-  image_url?: string;
+  image_url?: string; // Optional field
   visibility: boolean;
   created_at: Date;
 }

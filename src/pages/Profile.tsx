@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Camera, Music2, Upload } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -15,30 +15,119 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/contexts/AuthContext";
+import { userService } from "@/services/userService";
+import { UserProfile } from "@/types/user";
+import { GeoPoint } from "firebase/firestore";
 
 const Profile = () => {
   const { toast } = useToast();
+  const { user } = useAuth();
   const [isEditing, setIsEditing] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
 
   const instruments = ["Guitar", "Bass", "Drums", "Piano", "Vocals", "Saxophone", "Violin"];
   const skillLevels = ["Beginner", "Intermediate", "Advanced"];
   const genres = ["Rock", "Jazz", "Blues", "Pop", "Metal", "Classical", "Electronic", "Hip Hop"];
 
   const [profile, setProfile] = useState({
-    name: "John Doe",
+    name: user?.displayName || "",
     instrument: "Guitar",
-    skillLevel: "Intermediate",
-    bio: "Passionate guitarist looking to collaborate on rock and blues projects.",
-    location: "Brooklyn, NY",
-    selectedGenres: ["Rock", "Blues"],
+    skillLevel: "Intermediate" as "Beginner" | "Intermediate" | "Advanced",
+    bio: "",
+    location: "New York, NY",
+    selectedGenres: [] as string[],
   });
 
-  const handleSave = () => {
-    setIsEditing(false);
-    toast({
-      title: "Profile Updated!",
-      description: "Your changes have been saved successfully.",
-    });
+  // Load user profile from Firestore
+  useEffect(() => {
+    const loadProfile = async () => {
+      if (!user) return;
+      
+      setLoading(true);
+      try {
+        const userProfile = await userService.getUserProfile(user.uid);
+        if (userProfile) {
+          setProfile({
+            name: userProfile.name,
+            instrument: userProfile.instrument,
+            skillLevel: userProfile.skill_level,
+            bio: userProfile.bio,
+            location: `${userProfile.location.latitude}, ${userProfile.location.longitude}`, // Simplified for now
+            selectedGenres: userProfile.genres,
+          });
+        } else {
+          // Set default values from Firebase Auth
+          setProfile(prev => ({
+            ...prev,
+            name: user.displayName || user.email?.split('@')[0] || "",
+          }));
+        }
+      } catch (error) {
+        console.error('Error loading profile:', error);
+        toast({
+          title: "Error loading profile",
+          description: "Could not load your profile data.",
+          variant: "destructive",
+        });
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadProfile();
+  }, [user, toast]);
+
+  const handleSave = async () => {
+    if (!user) return;
+    
+    setSaving(true);
+    try {
+      // For now, use a default location (New York coordinates)
+      // TODO: Implement geolocation service
+      const defaultLocation = new GeoPoint(40.7128, -74.0060);
+      
+      const profileData: Partial<UserProfile> = {
+        name: profile.name,
+        instrument: profile.instrument,
+        skill_level: profile.skillLevel,
+        bio: profile.bio,
+        location: defaultLocation,
+        genres: profile.selectedGenres,
+        visibility: true,
+        audio_clips: [],
+        ...(user.photoURL && { image_url: user.photoURL }), // Only include if photoURL exists
+      };
+
+      await userService.createOrUpdateProfile(user.uid, profileData);
+      
+      setIsEditing(false);
+      toast({
+        title: "Profile Updated!",
+        description: "Your changes have been saved successfully.",
+      });
+    } catch (error) {
+      console.error('Error saving profile:', error);
+      console.error('Error details:', {
+        message: error instanceof Error ? error.message : 'Unknown error',
+        code: (error as any)?.code,
+        user: user?.uid,
+        profileData: {
+          name: profile.name,
+          instrument: profile.instrument,
+          skillLevel: profile.skillLevel,
+        }
+      });
+      
+      toast({
+        title: "Error saving profile",
+        description: `Could not save your profile: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        variant: "destructive",
+      });
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -48,13 +137,21 @@ const Profile = () => {
           <div className="flex items-center justify-between">
             <h1 className="text-4xl font-bold">My Profile</h1>
             {!isEditing ? (
-              <Button onClick={() => setIsEditing(true)}>Edit Profile</Button>
+              <Button onClick={() => setIsEditing(true)} disabled={loading}>
+                {loading ? "Loading..." : "Edit Profile"}
+              </Button>
             ) : (
               <div className="flex gap-2">
-                <Button variant="outline" onClick={() => setIsEditing(false)}>
+                <Button 
+                  variant="outline" 
+                  onClick={() => setIsEditing(false)}
+                  disabled={saving}
+                >
                   Cancel
                 </Button>
-                <Button onClick={handleSave}>Save Changes</Button>
+                <Button onClick={handleSave} disabled={saving}>
+                  {saving ? "Saving..." : "Save Changes"}
+                </Button>
               </div>
             )}
           </div>

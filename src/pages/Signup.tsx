@@ -7,6 +7,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
+import { userService } from "@/services/userService";
+import { GeoPoint } from "firebase/firestore";
 import waveformBg from "@/assets/waveform-bg.jpg";
 
 const Signup = () => {
@@ -44,7 +46,25 @@ const Signup = () => {
     setLoading(true);
 
     try {
-      await signUp(email, password);
+      const userCredential = await signUp(email, password);
+      const user = userCredential.user;
+      
+      // Create initial profile in Firestore
+      if (user) {
+        const defaultLocation = new GeoPoint(40.7128, -74.0060); // Default to NYC
+        await userService.createOrUpdateProfile(user.uid, {
+          name: `${firstName} ${lastName}`.trim(),
+          instrument: "Guitar", // Default instrument
+          skill_level: "Beginner", // Default skill level
+          bio: "",
+          location: defaultLocation,
+          genres: [],
+          visibility: true,
+          audio_clips: [],
+          ...(user.photoURL && { image_url: user.photoURL }), // Only include if photoURL exists
+        });
+      }
+      
       toast({
         title: "Account created!",
         description: "Welcome to Jammr! Please complete your profile.",
