@@ -1,12 +1,106 @@
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
+import { useState } from "react";
 import { Music } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { useAuth } from "@/contexts/AuthContext";
+import { useToast } from "@/hooks/use-toast";
+import { userService } from "@/services/userService";
+import { GeoPoint } from "firebase/firestore";
 import waveformBg from "@/assets/waveform-bg.jpg";
 
 const Signup = () => {
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [loading, setLoading] = useState(false);
+  const { signUp, signInWithGoogle } = useAuth();
+  const { toast } = useToast();
+  const navigate = useNavigate();
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (password !== confirmPassword) {
+      toast({
+        title: "Password mismatch",
+        description: "Passwords do not match.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (password.length < 6) {
+      toast({
+        title: "Password too short",
+        description: "Password must be at least 6 characters.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      const userCredential = await signUp(email, password);
+      const user = userCredential.user;
+      
+      // Create initial profile in Firestore
+      if (user) {
+        const defaultLocation = new GeoPoint(40.7128, -74.0060); // Default to NYC
+        await userService.createOrUpdateProfile(user.uid, {
+          name: `${firstName} ${lastName}`.trim(),
+          instrument: "Guitar", // Default instrument
+          skill_level: "Beginner", // Default skill level
+          bio: "",
+          location: defaultLocation,
+          genres: [],
+          visibility: true,
+          audio_clips: [],
+          ...(user.photoURL && { image_url: user.photoURL }), // Only include if photoURL exists
+        });
+      }
+      
+      toast({
+        title: "Account created!",
+        description: "Welcome to Jammr! Please complete your profile.",
+      });
+      navigate("/profile");
+    } catch (error: any) {
+      toast({
+        title: "Sign up failed",
+        description: error.message || "An error occurred during sign up.",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleGoogleSignIn = async () => {
+    setLoading(true);
+    try {
+      await signInWithGoogle();
+      toast({
+        title: "Welcome!",
+        description: "You've successfully signed up with Google.",
+      });
+      navigate("/profile");
+    } catch (error: any) {
+      toast({
+        title: "Google sign up failed",
+        description: error.message || "An error occurred during Google sign up.",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="min-h-screen flex">
       {/* Left Side - Form */}
@@ -23,35 +117,68 @@ const Signup = () => {
             <p className="text-muted-foreground">Join the community and find your musical match</p>
           </div>
 
-          <form className="space-y-4">
+          <form onSubmit={handleSubmit} className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="firstName">First Name</Label>
-                <Input id="firstName" placeholder="John" />
+                <Input 
+                  id="firstName" 
+                  placeholder="John"
+                  value={firstName}
+                  onChange={(e) => setFirstName(e.target.value)}
+                  required
+                />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="lastName">Last Name</Label>
-                <Input id="lastName" placeholder="Doe" />
+                <Input 
+                  id="lastName" 
+                  placeholder="Doe"
+                  value={lastName}
+                  onChange={(e) => setLastName(e.target.value)}
+                  required
+                />
               </div>
             </div>
 
             <div className="space-y-2">
               <Label htmlFor="email">Email</Label>
-              <Input id="email" type="email" placeholder="you@example.com" />
+              <Input 
+                id="email" 
+                type="email" 
+                placeholder="you@example.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+              />
             </div>
 
             <div className="space-y-2">
               <Label htmlFor="password">Password</Label>
-              <Input id="password" type="password" placeholder="••••••••" />
+              <Input 
+                id="password" 
+                type="password" 
+                placeholder="••••••••"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+              />
             </div>
 
             <div className="space-y-2">
               <Label htmlFor="confirmPassword">Confirm Password</Label>
-              <Input id="confirmPassword" type="password" placeholder="••••••••" />
+              <Input 
+                id="confirmPassword" 
+                type="password" 
+                placeholder="••••••••"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                required
+              />
             </div>
 
-            <Button className="w-full" size="lg">
-              Create Account
+            <Button className="w-full" size="lg" type="submit" disabled={loading}>
+              {loading ? "Creating account..." : "Create Account"}
             </Button>
           </form>
 
@@ -64,7 +191,13 @@ const Signup = () => {
             </div>
           </div>
 
-          <Button variant="outline" className="w-full" size="lg">
+          <Button 
+            variant="outline" 
+            className="w-full" 
+            size="lg"
+            onClick={handleGoogleSignIn}
+            disabled={loading}
+          >
             <svg className="mr-2 h-5 w-5" viewBox="0 0 24 24">
               <path
                 d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
