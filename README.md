@@ -1,6 +1,114 @@
-# Welcome to your Lovable project
+# Jammr - Connect Musicians Worldwide 🎸
 
-## Project info
+A mobile-first networking platform for musicians to connect, collaborate, and form bands. Built with React, TypeScript, and Firebase.
+
+## 🚀 Quick Start
+
+### Prerequisites
+- Node.js (v18 or higher) - [Install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
+- npm or yarn
+- Git
+
+### 1. Clone and Setup
+```bash
+# Clone the repository
+git clone https://github.com/lernerbe/Jammr.git
+cd Jammr
+
+# Install dependencies
+npm install
+
+# Copy environment template
+cp env.example .env
+```
+
+### 2. Firebase Setup (Required for Full Functionality)
+1. **Create Firebase Project**:
+   - Go to [Firebase Console](https://console.firebase.google.com/)
+   - Create a new project named "jammr-mvp"
+
+2. **Enable Services**:
+   - **Authentication**: Enable Email/Password and Google sign-in
+   - **Firestore Database**: Create database in test mode
+   - **Storage**: Enable for file uploads
+
+3. **Get Configuration**:
+   - Go to Project Settings → General → Your apps
+   - Add web app → Copy Firebase config
+   - Update `.env` file with your Firebase config:
+   ```env
+   VITE_FIREBASE_API_KEY=your_api_key_here
+   VITE_FIREBASE_AUTH_DOMAIN=your_project_id.firebaseapp.com
+   VITE_FIREBASE_PROJECT_ID=your_project_id
+   VITE_FIREBASE_STORAGE_BUCKET=your_project_id.appspot.com
+   VITE_FIREBASE_MESSAGING_SENDER_ID=your_sender_id
+   VITE_FIREBASE_APP_ID=your_app_id
+   ```
+
+4. **Set Security Rules**:
+   - **Firestore Rules**:
+   ```javascript
+   rules_version = '2';
+   service cloud.firestore {
+     match /databases/{database}/documents {
+       match /users/{userId} {
+         allow read, write: if request.auth != null && request.auth.uid == userId;
+       }
+     }
+   }
+   ```
+
+### 3. Run the Application
+```bash
+# Start development server
+npm run dev
+
+# Open http://localhost:8080 in your browser
+```
+
+### 4. Test the Application
+1. **Basic UI**: Navigate through all pages (should work without Firebase)
+2. **Authentication**: Create account, sign in, test Google OAuth
+3. **Profile Management**: Edit and save profile data
+4. **Check Firestore**: Verify data appears in Firebase Console
+
+### 5. Development Commands
+```bash
+npm run dev          # Start development server
+npm run build        # Build for production
+npm run preview      # Preview production build
+npm run lint         # Run ESLint
+```
+
+## 🏗️ Project Structure
+```
+src/
+├── components/      # Reusable UI components
+├── pages/          # Page components
+├── contexts/       # React contexts (Auth, etc.)
+├── services/       # Firebase services
+├── types/          # TypeScript type definitions
+├── lib/            # Utility functions
+└── hooks/          # Custom React hooks
+```
+
+## 🎯 Current Features
+- ✅ User Authentication (Email/Password + Google OAuth)
+- ✅ Profile Management with Firestore
+- ✅ Responsive Mobile-First Design
+- ✅ Protected Routes
+- ✅ Real-time Data Persistence
+
+## 🚧 Next Features
+- 🔄 Discovery with Real User Data
+- 🔄 Match Request System
+- 🔄 Real-time Chat
+- 🔄 Location Services
+- 🔄 Audio File Uploads
+
+---
+
+## Lovable Project Info
 
 **URL**: https://lovable.dev/projects/b905020c-ec93-4186-8114-59e8d01ae142
 
