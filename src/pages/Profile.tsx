@@ -336,7 +336,7 @@ const Profile = () => {
                   <Label htmlFor="skill">Skill Level</Label>
                   <Select
                     value={profile.skillLevel}
-                    onValueChange={(value) => setProfile({ ...profile, skillLevel: value })}
+                    onValueChange={(value) => setProfile({ ...profile, skillLevel: value as "Beginner" | "Intermediate" | "Advanced" })}
                     disabled={!isEditing}
                   >
                     <SelectTrigger id="skill">

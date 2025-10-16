@@ -48,6 +48,8 @@ const Matches = () => {
             const profile = await userService.getUserProfile(otherId);
             return {
               id: req.id,
+              requester_id: req.requester_id,
+              receiver_id: req.receiver_id,
               name: profile?.name || otherId,
               instrument: profile?.instrument || "",
               location: "",
@@ -217,7 +219,14 @@ const Matches = () => {
                     </div>
 
                     <div className="flex items-center gap-2">
-                      <Button size="sm" onClick={() => handleOpenChat(match.requester_id === user?.uid ? match.receiver_id : match.requester_id)}>
+                      <Button 
+                        size="sm" 
+                        onClick={() => {
+                          if (!user) return;
+                          const otherId = match.requester_id === user.uid ? match.receiver_id : match.requester_id;
+                          handleOpenChat(otherId);
+                        }}
+                      >
                         <MessageCircle className="h-4 w-4 mr-2" />
                         Chat
                       </Button>
