@@ -1,68 +1,99 @@
-import { useState } from "react";
-import { Check, X, Clock } from "lucide-react";
+import { useEffect, useState } from "react";
+import { Check, X, Clock, MessageCircle } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
+import { userService } from "@/services/userService";
+import { useAuth } from "@/contexts/AuthContext";
+import { useNavigate } from "react-router-dom";
 
 const Matches = () => {
   const { toast } = useToast();
+  const { user } = useAuth();
+  const navigate = useNavigate();
+  const [pendingRequests, setPendingRequests] = useState<any[]>([]);
+  const [acceptedMatches, setAcceptedMatches] = useState<any[]>([]);
 
-  const [pendingRequests] = useState([
-    {
-      id: "1",
-      name: "David Miller",
-      instrument: "Guitar",
-      location: "Brooklyn, NY",
-      status: "pending",
-      timestamp: "2 hours ago",
-    },
-    {
-      id: "2",
-      name: "Lisa Park",
-      instrument: "Vocals",
-      location: "Manhattan, NY",
-      status: "pending",
-      timestamp: "1 day ago",
-    },
-  ]);
+  useEffect(() => {
+    const load = async () => {
+      if (!user) return;
+      try {
+        // Fetch inbound requests and enrich with requester profile info
+        const inbound = await userService.getInboundRequests(user.uid);
+        const inboundWithProfiles = await Promise.all(
+          inbound.map(async (req: any) => {
+            const profile = await userService.getUserProfile(req.requester_id);
+            return {
+              id: req.id,
+              name: profile?.name || req.requester_id,
+              instrument: profile?.instrument || "",
+              location: "",
+              status: req.status,
+              timestamp: "",
+              imageUrl: profile?.image_url,
+              requester_id: req.requester_id,
+            };
+          })
+        );
+        setPendingRequests(inboundWithProfiles);
 
-  const [acceptedMatches] = useState([
-    {
-      id: "3",
-      name: "Sarah Johnson",
-      instrument: "Guitar",
-      location: "Brooklyn, NY",
-      lastMessage: "Let's meet up this weekend!",
-      timestamp: "3 hours ago",
-      unread: true,
-    },
-    {
-      id: "4",
-      name: "Marcus Chen",
-      instrument: "Drums",
-      location: "Manhattan, NY",
-      lastMessage: "Thanks for connecting!",
-      timestamp: "Yesterday",
-      unread: false,
-    },
-  ]);
+        // Fetch accepted requests and enrich with the other user's profile
+        const accepted = await userService.getAcceptedMatches(user.uid);
+        const acceptedWithProfiles = await Promise.all(
+          accepted.map(async (req: any) => {
+            const otherId = req.requester_id === user.uid ? req.receiver_id : req.requester_id;
+            const profile = await userService.getUserProfile(otherId);
+            return {
+              id: req.id,
+              name: profile?.name || otherId,
+              instrument: profile?.instrument || "",
+              location: "",
+              lastMessage: "",
+              timestamp: "",
+              unread: false,
+              imageUrl: profile?.image_url,
+            };
+          })
+        );
+        setAcceptedMatches(acceptedWithProfiles);
+      } catch (e) {
+        console.error('Failed to load matches', e);
+        toast({ title: 'Could not load matches', variant: 'destructive' });
+      }
+    };
+    load();
+  }, [user, toast]);
 
-  const handleAccept = (id: string, name: string) => {
-    toast({
-      title: "Match Accepted!",
-      description: `You can now message ${name}`,
-    });
+  const handleAccept = async (id: string, name: string) => {
+    try {
+      await userService.acceptMatchRequest(id);
+      toast({ title: "Match Accepted!", description: `You can now message ${name}` });
+      setPendingRequests(prev => prev.filter(r => r.id !== id));
+    } catch (e) {
+      toast({ title: "Failed to accept", variant: "destructive" });
+    }
+  };
+  const handleOpenChat = async (otherUserId: string) => {
+    if (!user) return;
+    try {
+      const chatId = await userService.createOrGetChat(user.uid, otherUserId);
+      navigate(`/messages?chatId=${encodeURIComponent(chatId)}`);
+    } catch (e) {
+      toast({ title: "Failed to open chat", variant: "destructive" });
+    }
   };
 
-  const handleDecline = (id: string) => {
-    toast({
-      title: "Request Declined",
-      description: "The match request has been removed.",
-      variant: "destructive",
-    });
+  const handleDecline = async (id: string) => {
+    try {
+      await userService.declineMatchRequest(id);
+      toast({ title: "Request Declined", variant: "destructive" });
+      setPendingRequests(prev => prev.filter(r => r.id !== id));
+    } catch (e) {
+      toast({ title: "Failed to decline", variant: "destructive" });
+    }
   };
 
   return (
@@ -149,13 +180,7 @@ const Matches = () => {
               acceptedMatches.map((match) => (
                 <Card
                   key={match.id}
-                  className="p-6 cursor-pointer hover-lift"
-                  onClick={() =>
-                    toast({
-                      title: "Opening chat...",
-                      description: "Chat feature coming soon!",
-                    })
-                  }
+                  className="p-6 hover-lift"
                 >
                   <div className="flex items-center gap-4">
                     <div className="relative">
@@ -189,6 +214,13 @@ const Matches = () => {
                         {match.lastMessage}
                       </p>
                       <p className="text-xs text-muted-foreground mt-1">{match.timestamp}</p>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      <Button size="sm" onClick={() => handleOpenChat(match.requester_id === user?.uid ? match.receiver_id : match.requester_id)}>
+                        <MessageCircle className="h-4 w-4 mr-2" />
+                        Chat
+                      </Button>
                     </div>
                   </div>
                 </Card>

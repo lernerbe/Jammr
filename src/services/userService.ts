@@ -1,10 +1,12 @@
 import {
   collection,
+  addDoc,
   doc,
   getDocs,
   getDoc,
   setDoc,
   updateDoc,
+  onSnapshot,
   query,
   where,
   orderBy,
@@ -12,11 +14,13 @@ import {
   GeoPoint,
   Timestamp,
 } from 'firebase/firestore';
-import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
 import { db, storage } from '@/lib/firebase';
 import { UserProfile, FilterOptions } from '@/types/user';
 
 const USERS_COLLECTION = 'users';
+const MATCH_REQUESTS_COLLECTION = 'match_requests';
+const CHATS_COLLECTION = 'chats';
 
 export const userService = {
   // Create or update user profile
@@ -27,6 +31,123 @@ export const userService = {
       user_id: userId,
       created_at: Timestamp.now(),
     }, { merge: true });
+  },
+
+  // Send a match/chat request
+  async sendMatchRequest(requesterId: string, receiverId: string): Promise<string> {
+    const requestsRef = collection(db, MATCH_REQUESTS_COLLECTION);
+    const docRef = await addDoc(requestsRef, {
+      requester_id: requesterId,
+      receiver_id: receiverId,
+      status: 'pending',
+      created_at: Timestamp.now(),
+    });
+    return docRef.id;
+  },
+
+  // Accept a match request
+  async acceptMatchRequest(requestId: string): Promise<void> {
+    const reqRef = doc(db, MATCH_REQUESTS_COLLECTION, requestId);
+    await updateDoc(reqRef, { status: 'accepted' });
+  },
+
+  // Decline a match request
+  async declineMatchRequest(requestId: string): Promise<void> {
+    const reqRef = doc(db, MATCH_REQUESTS_COLLECTION, requestId);
+    await updateDoc(reqRef, { status: 'declined' });
+  },
+
+  // Get inbound (received) pending requests for a user
+  async getInboundRequests(userId: string): Promise<any[]> {
+    const requestsRef = collection(db, MATCH_REQUESTS_COLLECTION);
+    // Avoid Firestore composite index requirement by sorting client-side
+    const q = query(
+      requestsRef,
+      where('receiver_id', '==', userId),
+      where('status', '==', 'pending')
+    );
+    const snapshot = await getDocs(q);
+    const results: any[] = [];
+    snapshot.forEach((docSnap) => {
+      const data = docSnap.data();
+      results.push({ id: docSnap.id, ...data });
+    });
+    // Sort newest first if created_at exists
+    return results.sort((a, b) => (b.created_at?.seconds || 0) - (a.created_at?.seconds || 0)).slice(0, 50);
+  },
+
+  // Get accepted matches for a user (either requester or receiver)
+  async getAcceptedMatches(userId: string): Promise<any[]> {
+    const requestsRef = collection(db, MATCH_REQUESTS_COLLECTION);
+    const q1 = query(requestsRef, where('receiver_id', '==', userId), where('status', '==', 'accepted'));
+    const q2 = query(requestsRef, where('requester_id', '==', userId), where('status', '==', 'accepted'));
+    const [s1, s2] = await Promise.all([getDocs(q1), getDocs(q2)]);
+    const entries: any[] = [];
+    s1.forEach((d) => entries.push({ id: d.id, ...d.data() }));
+    s2.forEach((d) => entries.push({ id: d.id, ...d.data() }));
+    // De-dupe and sort
+    const map: Record<string, any> = {};
+    entries.forEach((e) => (map[e.id] = e));
+    return Object.values(map).sort((a: any, b: any) => (b.created_at?.seconds || 0) - (a.created_at?.seconds || 0));
+  },
+
+  // Get outbound pending requests for current user
+  async getOutboundPending(userId: string): Promise<any[]> {
+    const requestsRef = collection(db, MATCH_REQUESTS_COLLECTION);
+    const q = query(requestsRef, where('requester_id', '==', userId), where('status', '==', 'pending'));
+    const snapshot = await getDocs(q);
+    const res: any[] = [];
+    snapshot.forEach(d => res.push({ id: d.id, ...d.data() }));
+    return res;
+  },
+
+  // Chats -------------------------------------------------
+  async createOrGetChat(userA: string, userB: string): Promise<string> {
+    const chatsRef = collection(db, CHATS_COLLECTION);
+    // Find existing chat with both participants
+    const q = query(chatsRef, where('participants', 'array-contains', userA));
+    const snapshot = await getDocs(q);
+    let existing: string | null = null;
+    snapshot.forEach(d => {
+      const data = d.data() as any;
+      if (Array.isArray(data.participants) && data.participants.includes(userB)) {
+        existing = d.id;
+      }
+    });
+    if (existing) return existing;
+    const docRef = await addDoc(chatsRef, {
+      participants: [userA, userB],
+      created_at: Timestamp.now(),
+    });
+    return docRef.id;
+  },
+
+  async getUserChats(userId: string): Promise<any[]> {
+    const chatsRef = collection(db, CHATS_COLLECTION);
+    const q = query(chatsRef, where('participants', 'array-contains', userId));
+    const snapshot = await getDocs(q);
+    const chats: any[] = [];
+    snapshot.forEach(d => chats.push({ id: d.id, ...d.data() }));
+    return chats.sort((a, b) => (b.created_at?.seconds || 0) - (a.created_at?.seconds || 0));
+  },
+
+  async sendMessage(chatId: string, senderId: string, text: string): Promise<void> {
+    const messagesRef = collection(db, `${CHATS_COLLECTION}/${chatId}/messages`);
+    await addDoc(messagesRef, {
+      sender_id: senderId,
+      text,
+      created_at: Timestamp.now(),
+    });
+  },
+
+  subscribeToMessages(chatId: string, callback: (messages: any[]) => void): () => void {
+    const messagesRef = collection(db, `${CHATS_COLLECTION}/${chatId}/messages`);
+    const q = query(messagesRef, orderBy('created_at', 'asc'), limit(200));
+    return onSnapshot(q, (snap) => {
+      const msgs: any[] = [];
+      snap.forEach(d => msgs.push({ id: d.id, ...d.data() }));
+      callback(msgs);
+    });
   },
 
   // Get user profile by ID
@@ -124,6 +245,34 @@ export const userService = {
     const videoRef = ref(storage, `video-clips/${userId}/${Date.now()}-${file.name}`);
     const snapshot = await uploadBytes(videoRef, file);
     return await getDownloadURL(snapshot.ref);
+  },
+
+  // Delete a storage file by its download URL
+  async deleteFileByUrl(url: string): Promise<void> {
+    const fileRef = ref(storage, url);
+    await deleteObject(fileRef);
+  },
+
+  // Remove gallery image (delete from storage and update Firestore array)
+  async removeGalleryImage(userId: string, url: string): Promise<void> {
+    try {
+      await this.deleteFileByUrl(url);
+    } finally {
+      const existing = await this.getUserProfile(userId);
+      const nextList = (existing?.image_gallery || []).filter((u: string) => u !== url);
+      await this.createOrUpdateProfile(userId, { image_gallery: nextList });
+    }
+  },
+
+  // Remove video clip (delete from storage and update Firestore array)
+  async removeVideoClip(userId: string, url: string): Promise<void> {
+    try {
+      await this.deleteFileByUrl(url);
+    } finally {
+      const existing = await this.getUserProfile(userId);
+      const nextList = (existing?.video_clips || []).filter((u: string) => u !== url);
+      await this.createOrUpdateProfile(userId, { video_clips: nextList });
+    }
   },
 
   // Calculate distance between two GeoPoints (Haversine formula)

@@ -1,4 +1,4 @@
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { Music, Search, MessageCircle, User, LogOut } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
@@ -13,11 +13,13 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 const Navbar = () => {
   const location = useLocation();
   const { user, logout } = useAuth();
+  const navigate = useNavigate();
   const isActive = (path: string) => location.pathname === path;
 
   const handleLogout = async () => {
     try {
       await logout();
+      navigate("/login");
     } catch (error) {
       console.error('Logout failed:', error);
     }
@@ -33,9 +35,9 @@ const Navbar = () => {
           </span>
         </Link>
 
-        {/* Desktop User Menu */}
+        {/* User Menu */}
         {user && (
-          <div className="hidden md:flex items-center gap-4">
+          <div className="flex items-center gap-4">
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" className="relative h-8 w-8 rounded-full">

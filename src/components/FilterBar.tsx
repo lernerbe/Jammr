@@ -42,6 +42,8 @@ interface FilterBarProps {
 const FilterBar = ({ onFilterChange }: FilterBarProps) => {
   const [distance, setDistance] = React.useState([25]);
   const [selectedGenres, setSelectedGenres] = React.useState<string[]>([]);
+  const [instrument, setInstrument] = React.useState<string | undefined>(undefined);
+  const [skillLevel, setSkillLevel] = React.useState<string | undefined>(undefined);
 
   const toggleGenre = (genre: string) => {
     setSelectedGenres((prev) =>
@@ -77,7 +79,7 @@ const FilterBar = ({ onFilterChange }: FilterBarProps) => {
             <div className="space-y-6 mt-6">
               <div className="space-y-3">
                 <Label htmlFor="instrument">Instrument</Label>
-                <Select>
+                <Select value={instrument} onValueChange={(v) => setInstrument(v === 'all instruments' ? undefined : v)}>
                   <SelectTrigger id="instrument">
                     <SelectValue placeholder="Select instrument" />
                   </SelectTrigger>
@@ -93,7 +95,7 @@ const FilterBar = ({ onFilterChange }: FilterBarProps) => {
 
               <div className="space-y-3">
                 <Label htmlFor="skill">Skill Level</Label>
-                <Select>
+                <Select value={skillLevel} onValueChange={(v) => setSkillLevel(v === 'all levels' ? undefined : v.charAt(0).toUpperCase() + v.slice(1))}>
                   <SelectTrigger id="skill">
                     <SelectValue placeholder="Select skill level" />
                   </SelectTrigger>
@@ -138,7 +140,12 @@ const FilterBar = ({ onFilterChange }: FilterBarProps) => {
                 </div>
               </div>
 
-              <Button className="w-full">Apply Filters</Button>
+              <Button className="w-full" onClick={() => onFilterChange?.({
+                instrument: instrument && instrument !== 'all instruments' ? instrument.charAt(0).toUpperCase() + instrument.slice(1) : undefined,
+                skillLevel,
+                genres: selectedGenres,
+                distance: distance[0],
+              })}>Apply Filters</Button>
             </div>
           </SheetContent>
         </Sheet>

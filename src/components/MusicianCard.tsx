@@ -15,6 +15,7 @@ interface MusicianCardProps {
     distance: number;
     imageUrl?: string;
     bio: string;
+    requested?: boolean;
   };
   onRequestChat?: (id: string) => void;
   onViewProfile?: (id: string) => void;
@@ -115,8 +116,10 @@ const MusicianCard = ({ musician, onRequestChat, onViewProfile }: MusicianCardPr
             size="sm"
             className="flex-1"
             onClick={() => onRequestChat?.(musician.id)}
+            disabled={musician.requested}
+            variant={musician.requested ? 'outline' : 'default'}
           >
-            Request to Chat
+            {musician.requested ? 'Requested' : 'Request to Chat'}
           </Button>
         </div>
       </div>

@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Camera, Music2, Upload } from "lucide-react";
+import { Camera, Music2, Upload, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -41,6 +41,7 @@ const Profile = () => {
     selectedGenres: [] as string[],
     imageUrl: user?.photoURL || "",
     imageGallery: [] as string[],
+    videoClips: [] as string[],
   });
 
   const handleProfileImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -73,6 +74,7 @@ const Profile = () => {
       const existing = await userService.getUserProfile(user.uid);
       const nextList = [...(existing?.video_clips || []), url];
       await userService.createOrUpdateProfile(user.uid, { video_clips: nextList });
+      setProfile(prev => ({ ...prev, videoClips: nextList }));
       toast({ title: "Video uploaded" });
     } catch (error) {
       console.error('Video upload failed', error);
@@ -104,6 +106,36 @@ const Profile = () => {
     }
   };
 
+  const handleDeleteGalleryImage = async (url: string) => {
+    if (!user) return;
+    try {
+      setUploading(true);
+      await userService.removeGalleryImage(user.uid, url);
+      setProfile(prev => ({ ...prev, imageGallery: prev.imageGallery.filter(u => u !== url) }));
+      toast({ title: "Image removed" });
+    } catch (error) {
+      console.error('Failed to remove image', error);
+      toast({ title: "Failed to remove image", description: (error as any)?.message || 'Unknown error', variant: "destructive" });
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const handleDeleteVideo = async (url: string) => {
+    if (!user) return;
+    try {
+      setUploading(true);
+      await userService.removeVideoClip(user.uid, url);
+      setProfile(prev => ({ ...prev, videoClips: prev.videoClips.filter(u => u !== url) }));
+      toast({ title: "Video removed" });
+    } catch (error) {
+      console.error('Failed to remove video', error);
+      toast({ title: "Failed to remove video", description: (error as any)?.message || 'Unknown error', variant: "destructive" });
+    } finally {
+      setUploading(false);
+    }
+  };
+
   // Load user profile from Firestore
   useEffect(() => {
     const loadProfile = async () => {
@@ -122,6 +154,7 @@ const Profile = () => {
             selectedGenres: userProfile.genres,
             imageUrl: userProfile.image_url || user?.photoURL || "",
             imageGallery: userProfile.image_gallery || [],
+            videoClips: userProfile.video_clips || [],
           });
         } else {
           // Set default values from Firebase Auth
@@ -130,6 +163,7 @@ const Profile = () => {
             name: user.displayName || user.email?.split('@')[0] || "",
             imageUrl: user.photoURL || prev.imageUrl,
             imageGallery: [],
+            videoClips: [],
           }));
         }
       } catch (error) {
@@ -230,7 +264,7 @@ const Profile = () => {
               <div className="flex flex-col items-center gap-4">
                 <div className="relative">
                   <Avatar className="h-32 w-32 border-4 border-primary/20">
-                    <AvatarImage src={profile.imageUrl} />
+                    <AvatarImage src={profile.imageUrl} className="object-cover" />
                     <AvatarFallback className="bg-primary/10 text-primary font-semibold text-3xl">
                       {profile.name
                         .split(" ")
@@ -388,8 +422,46 @@ const Profile = () => {
                 {profile.imageGallery.length > 0 && (
                   <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-3">
                     {profile.imageGallery.map((src, idx) => (
-                      <div key={idx} className="aspect-square overflow-hidden rounded-md border">
+                      <div key={idx} className="group relative aspect-square overflow-hidden rounded-md border">
                         <img src={src} alt={`Gallery ${idx + 1}`} className="h-full w-full object-cover" />
+                        {isEditing && (
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteGalleryImage(src)}
+                            className="absolute top-1 right-1 hidden group-hover:flex items-center justify-center h-8 w-8 rounded bg-destructive text-white shadow"
+                            aria-label="Delete image"
+                            disabled={uploading}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </button>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+                {profile.videoClips.length > 0 && (
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+                    {profile.videoClips.map((src, idx) => (
+                      <div key={idx} className="group relative aspect-video overflow-hidden rounded-md border">
+                        <video
+                          src={src}
+                          className="h-full w-full object-cover"
+                          controls
+                          preload="metadata"
+                          playsInline
+                          muted
+                        />
+                        {isEditing && (
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteVideo(src)}
+                            className="absolute top-1 right-1 hidden group-hover:flex items-center justify-center h-8 w-8 rounded bg-destructive text-white shadow"
+                            aria-label="Delete video"
+                            disabled={uploading}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </button>
+                        )}
                       </div>
                     ))}
                   </div>
