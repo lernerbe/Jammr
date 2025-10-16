@@ -17,25 +17,14 @@ cd Jammr
 
 # Install dependencies
 npm install
-
-# Copy environment template
-cp env.example .env
 ```
 
-### 2. Firebase Setup (Required for Full Functionality)
-1. **Create Firebase Project**:
-   - Go to [Firebase Console](https://console.firebase.google.com/)
-   - Create a new project named "jammr-mvp"
+### 2. Firebase Configuration
+**Use the shared Firebase project** (recommended for team development):
 
-2. **Enable Services**:
-   - **Authentication**: Enable Email/Password and Google sign-in
-   - **Firestore Database**: Create database in test mode
-   - **Storage**: Enable for file uploads
-
-3. **Get Configuration**:
-   - Go to Project Settings → General → Your apps
-   - Add web app → Copy Firebase config
-   - Update `.env` file with your Firebase config:
+1. **Get Firebase config from team lead**:
+   - Ask for the Firebase configuration values
+   - Create your `.env` file with the provided config:
    ```env
    VITE_FIREBASE_API_KEY=your_api_key_here
    VITE_FIREBASE_AUTH_DOMAIN=your_project_id.firebaseapp.com
@@ -45,18 +34,11 @@ cp env.example .env
    VITE_FIREBASE_APP_ID=your_app_id
    ```
 
-4. **Set Security Rules**:
-   - **Firestore Rules**:
-   ```javascript
-   rules_version = '2';
-   service cloud.firestore {
-     match /databases/{database}/documents {
-       match /users/{userId} {
-         allow read, write: if request.auth != null && request.auth.uid == userId;
-       }
-     }
-   }
-   ```
+2. **Benefits of shared Firebase**:
+   - ✅ Same database - see each other's test data
+   - ✅ Shared authentication - can test with same users
+   - ✅ No setup required - just copy config
+   - ✅ Real-time collaboration
 
 ### 3. Run the Application
 ```bash
