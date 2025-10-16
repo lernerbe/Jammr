@@ -112,6 +112,20 @@ export const userService = {
     return await getDownloadURL(snapshot.ref);
   },
 
+  // Upload gallery image
+  async uploadGalleryImage(userId: string, file: File): Promise<string> {
+    const imageRef = ref(storage, `gallery-images/${userId}/${Date.now()}-${file.name}`);
+    const snapshot = await uploadBytes(imageRef, file);
+    return await getDownloadURL(snapshot.ref);
+  },
+
+  // Upload video clip
+  async uploadVideoClip(userId: string, file: File): Promise<string> {
+    const videoRef = ref(storage, `video-clips/${userId}/${Date.now()}-${file.name}`);
+    const snapshot = await uploadBytes(videoRef, file);
+    return await getDownloadURL(snapshot.ref);
+  },
+
   // Calculate distance between two GeoPoints (Haversine formula)
   calculateDistance(point1: GeoPoint, point2: GeoPoint): number {
     const R = 3959; // Earth's radius in miles

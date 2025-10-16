@@ -26,6 +26,7 @@ const Profile = () => {
   const [isEditing, setIsEditing] = useState(false);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [uploading, setUploading] = useState(false);
 
   const instruments = ["Guitar", "Bass", "Drums", "Piano", "Vocals", "Saxophone", "Violin"];
   const skillLevels = ["Beginner", "Intermediate", "Advanced"];
@@ -38,7 +39,70 @@ const Profile = () => {
     bio: "",
     location: "New York, NY",
     selectedGenres: [] as string[],
+    imageUrl: user?.photoURL || "",
+    imageGallery: [] as string[],
   });
+
+  const handleProfileImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!user) return;
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      setUploading(true);
+      const url = await userService.uploadProfileImage(user.uid, file);
+      await userService.createOrUpdateProfile(user.uid, { image_url: url });
+      toast({ title: "Profile photo updated" });
+      setProfile(prev => ({ ...prev, imageUrl: url }));
+    } catch (error) {
+      console.error('Image upload failed', error);
+      toast({ title: "Image upload failed", variant: "destructive" });
+    } finally {
+      setUploading(false);
+      e.target.value = '';
+    }
+  };
+
+  const handleVideoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!user) return;
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      setUploading(true);
+      const url = await userService.uploadVideoClip(user.uid, file);
+      // Append to video_clips array
+      const existing = await userService.getUserProfile(user.uid);
+      const nextList = [...(existing?.video_clips || []), url];
+      await userService.createOrUpdateProfile(user.uid, { video_clips: nextList });
+      toast({ title: "Video uploaded" });
+    } catch (error) {
+      console.error('Video upload failed', error);
+      toast({ title: "Video upload failed", variant: "destructive" });
+    } finally {
+      setUploading(false);
+      e.target.value = '';
+    }
+  };
+
+  const handleGalleryImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!user) return;
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      setUploading(true);
+      const url = await userService.uploadGalleryImage(user.uid, file);
+      // Append to image_gallery array
+      const existing = await userService.getUserProfile(user.uid);
+      const nextList = [...(existing?.image_gallery || []), url];
+      await userService.createOrUpdateProfile(user.uid, { image_gallery: nextList });
+      toast({ title: "Image added to gallery" });
+    } catch (error) {
+      console.error('Gallery image upload failed', error);
+      toast({ title: "Gallery image upload failed", description: (error as any)?.message || 'Unknown error', variant: "destructive" });
+    } finally {
+      setUploading(false);
+      e.target.value = '';
+    }
+  };
 
   // Load user profile from Firestore
   useEffect(() => {
@@ -56,12 +120,16 @@ const Profile = () => {
             bio: userProfile.bio,
             location: `${userProfile.location.latitude}, ${userProfile.location.longitude}`, // Simplified for now
             selectedGenres: userProfile.genres,
+            imageUrl: userProfile.image_url || user?.photoURL || "",
+            imageGallery: userProfile.image_gallery || [],
           });
         } else {
           // Set default values from Firebase Auth
           setProfile(prev => ({
             ...prev,
             name: user.displayName || user.email?.split('@')[0] || "",
+            imageUrl: user.photoURL || prev.imageUrl,
+            imageGallery: [],
           }));
         }
       } catch (error) {
@@ -162,7 +230,7 @@ const Profile = () => {
               <div className="flex flex-col items-center gap-4">
                 <div className="relative">
                   <Avatar className="h-32 w-32 border-4 border-primary/20">
-                    <AvatarImage src="" />
+                    <AvatarImage src={profile.imageUrl} />
                     <AvatarFallback className="bg-primary/10 text-primary font-semibold text-3xl">
                       {profile.name
                         .split(" ")
@@ -171,13 +239,19 @@ const Profile = () => {
                     </AvatarFallback>
                   </Avatar>
                   {isEditing && (
-                    <Button
-                      size="icon"
-                      variant="secondary"
-                      className="absolute bottom-0 right-0 rounded-full shadow-lg"
-                    >
-                      <Camera className="h-4 w-4" />
-                    </Button>
+                    <>
+                      <Button
+                        size="icon"
+                        variant="secondary"
+                        className="absolute bottom-0 right-0 rounded-full shadow-lg"
+                        asChild
+                      >
+                        <label className="cursor-pointer">
+                          <Camera className="h-4 w-4" />
+                          <input type="file" accept="image/*" className="hidden" onChange={handleProfileImageUpload} disabled={uploading} />
+                        </label>
+                      </Button>
+                    </>
                   )}
                 </div>
               </div>
@@ -284,21 +358,42 @@ const Profile = () => {
                 </div>
               </div>
 
-              {/* Audio Clips */}
+              {/* Media Uploads */}
               <div className="space-y-3">
-                <Label>Audio Clips</Label>
+                <Label>Media</Label>
                 <Card className="p-8 text-center border-dashed">
                   <Music2 className="h-12 w-12 mx-auto mb-3 text-muted-foreground" />
                   <p className="text-sm text-muted-foreground mb-4">
-                    Upload audio clips to showcase your skills
+                    Upload audio or video clips to showcase your skills
                   </p>
                   {isEditing && (
-                    <Button variant="outline" disabled>
-                      <Upload className="h-4 w-4 mr-2" />
-                      Upload Audio (Coming Soon)
-                    </Button>
+                    <div className="flex items-center justify-center gap-3 flex-wrap">
+                      <Button asChild variant="outline" disabled={uploading}>
+                        <label className="cursor-pointer">
+                          <Upload className="h-4 w-4 mr-2" />
+                          Upload Image
+                          <input type="file" accept="image/*" className="hidden" onChange={handleGalleryImageUpload} />
+                        </label>
+                      </Button>
+                      <Button asChild variant="outline" disabled={uploading}>
+                        <label className="cursor-pointer">
+                          <Upload className="h-4 w-4 mr-2" />
+                          Upload Video
+                          <input type="file" accept="video/*" className="hidden" onChange={handleVideoUpload} />
+                        </label>
+                      </Button>
+                    </div>
                   )}
                 </Card>
+                {profile.imageGallery.length > 0 && (
+                  <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-3">
+                    {profile.imageGallery.map((src, idx) => (
+                      <div key={idx} className="aspect-square overflow-hidden rounded-md border">
+                        <img src={src} alt={`Gallery ${idx + 1}`} className="h-full w-full object-cover" />
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
           </Card>

@@ -95,6 +95,8 @@ All colors MUST be HSL.
 
   body {
     @apply bg-background text-foreground font-sans antialiased;
+    /* Ensure content clears iPhone notch/status bar when installed as a PWA */
+    padding-top: calc(env(safe-area-inset-top, 0px) + 8px);
   }
 
   h1, h2, h3, h4, h5, h6 {

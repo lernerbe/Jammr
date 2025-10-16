@@ -10,6 +10,8 @@ export interface UserProfile {
   location: GeoPoint;
   audio_clips: string[];
   image_url?: string; // Optional field
+  image_gallery?: string[]; // Optional list of gallery image URLs
+  video_clips?: string[]; // Optional list of uploaded video URLs
   visibility: boolean;
   created_at: Date;
 }
