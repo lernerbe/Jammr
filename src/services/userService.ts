@@ -45,10 +45,19 @@ export const userService = {
     return docRef.id;
   },
 
-  // Accept a match request
-  async acceptMatchRequest(requestId: string): Promise<void> {
+  // Accept a match request and create chat
+  async acceptMatchRequest(requestId: string): Promise<string> {
     const reqRef = doc(db, MATCH_REQUESTS_COLLECTION, requestId);
     await updateDoc(reqRef, { status: 'accepted' });
+
+    // Get the request data to create chat
+    const reqSnap = await getDoc(reqRef);
+    if (reqSnap.exists()) {
+      const reqData = reqSnap.data();
+      const chatId = await this.createOrGetChat(reqData.requester_id, reqData.receiver_id);
+      return chatId;
+    }
+    throw new Error('Request not found');
   },
 
   // Decline a match request
@@ -101,43 +110,106 @@ export const userService = {
     return res;
   },
 
+  // Get all requests (pending and accepted) for current user to check if already requested
+  async getAllRequestsForUser(userId: string): Promise<any[]> {
+    const requestsRef = collection(db, MATCH_REQUESTS_COLLECTION);
+    const q1 = query(requestsRef, where('requester_id', '==', userId));
+    const q2 = query(requestsRef, where('receiver_id', '==', userId));
+    const [s1, s2] = await Promise.all([getDocs(q1), getDocs(q2)]);
+    const entries: any[] = [];
+    s1.forEach((d) => entries.push({ id: d.id, ...d.data() }));
+    s2.forEach((d) => entries.push({ id: d.id, ...d.data() }));
+    return entries;
+  },
+
+  // Check if user has already sent a request to specific receiver
+  async hasExistingRequest(requesterId: string, receiverId: string): Promise<boolean> {
+    const requestsRef = collection(db, MATCH_REQUESTS_COLLECTION);
+    const q = query(
+      requestsRef,
+      where('requester_id', '==', requesterId),
+      where('receiver_id', '==', receiverId)
+    );
+    const snapshot = await getDocs(q);
+    return !snapshot.empty;
+  },
+
   // Chats -------------------------------------------------
   async createOrGetChat(userA: string, userB: string): Promise<string> {
-    const chatsRef = collection(db, CHATS_COLLECTION);
-    // Find existing chat with both participants
-    const q = query(chatsRef, where('participants', 'array-contains', userA));
-    const snapshot = await getDocs(q);
-    let existing: string | null = null;
-    snapshot.forEach(d => {
-      const data = d.data() as any;
-      if (Array.isArray(data.participants) && data.participants.includes(userB)) {
-        existing = d.id;
+    const [u1, u2] = [userA, userB].sort();
+    const chatId = `${u1}_${u2}`;
+    const chatRef = doc(db, CHATS_COLLECTION, chatId);
+    try {
+      // Check if chat already exists first
+      const chatSnap = await getDoc(chatRef);
+      if (chatSnap.exists()) {
+        console.log('Chat already exists:', chatId);
+        return chatId;
       }
-    });
-    if (existing) return existing;
-    const docRef = await addDoc(chatsRef, {
-      participants: [userA, userB],
-      created_at: Timestamp.now(),
-    });
-    return docRef.id;
+
+      // Create new chat
+      console.log('Creating new chat:', chatId);
+      await setDoc(chatRef, {
+        participants: [u1, u2],
+        created_at: Timestamp.now(),
+        last_message: '',
+        last_message_at: null
+      }, { merge: false });
+      console.log('Chat created successfully:', chatId);
+    } catch (e) {
+      console.log('Error creating chat (may already exist):', e);
+      // If the doc already exists or update is restricted by rules, proceed with chatId
+    }
+    return chatId;
   },
 
   async getUserChats(userId: string): Promise<any[]> {
+    console.log('getUserChats called for userId:', userId);
     const chatsRef = collection(db, CHATS_COLLECTION);
     const q = query(chatsRef, where('participants', 'array-contains', userId));
     const snapshot = await getDocs(q);
     const chats: any[] = [];
-    snapshot.forEach(d => chats.push({ id: d.id, ...d.data() }));
+    snapshot.forEach(d => {
+      const chatData = { id: d.id, ...d.data() };
+      console.log('Found chat:', chatData);
+      chats.push(chatData);
+    });
+    console.log('Total chats found:', chats.length);
     return chats.sort((a, b) => (b.created_at?.seconds || 0) - (a.created_at?.seconds || 0));
   },
 
+  async getChatById(chatId: string): Promise<any | null> {
+    const chatRef = doc(db, CHATS_COLLECTION, chatId);
+    const snap = await getDoc(chatRef);
+    if (!snap.exists()) return null;
+    return { id: snap.id, ...snap.data() } as any;
+  },
+
   async sendMessage(chatId: string, senderId: string, text: string): Promise<void> {
-    const messagesRef = collection(db, `${CHATS_COLLECTION}/${chatId}/messages`);
-    await addDoc(messagesRef, {
-      sender_id: senderId,
-      text,
-      created_at: Timestamp.now(),
-    });
+    console.log('userService.sendMessage called with:', { chatId, senderId, text });
+
+    if (!db) {
+      console.error('Firestore database not initialized');
+      throw new Error('Database not available');
+    }
+
+    try {
+      const messagesRef = collection(db, `${CHATS_COLLECTION}/${chatId}/messages`);
+      console.log('Messages collection path:', `${CHATS_COLLECTION}/${chatId}/messages`);
+
+      const messageData = {
+        sender_id: senderId,
+        text,
+        created_at: Timestamp.now(),
+      };
+      console.log('Sending message data:', messageData);
+
+      const docRef = await addDoc(messagesRef, messageData);
+      console.log('Message sent successfully with ID:', docRef.id);
+    } catch (error) {
+      console.error('Error in userService.sendMessage:', error);
+      throw error;
+    }
   },
 
   subscribeToMessages(chatId: string, callback: (messages: any[]) => void): () => void {

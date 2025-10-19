@@ -48,6 +48,8 @@ const Matches = () => {
             const profile = await userService.getUserProfile(otherId);
             return {
               id: req.id,
+              requester_id: req.requester_id,
+              receiver_id: req.receiver_id,
               name: profile?.name || otherId,
               instrument: profile?.instrument || "",
               location: "",
@@ -69,10 +71,19 @@ const Matches = () => {
 
   const handleAccept = async (id: string, name: string) => {
     try {
-      await userService.acceptMatchRequest(id);
-      toast({ title: "Match Accepted!", description: `You can now message ${name}` });
+      const chatId = await userService.acceptMatchRequest(id);
+      toast({
+        title: "Match Accepted!",
+        description: `You can now message ${name}. Opening chat...`
+      });
       setPendingRequests(prev => prev.filter(r => r.id !== id));
+
+      // Automatically open the chat
+      setTimeout(() => {
+        navigate(`/messages?chatId=${encodeURIComponent(chatId)}`);
+      }, 1000);
     } catch (e) {
+      console.error('Failed to accept match request:', e);
       toast({ title: "Failed to accept", variant: "destructive" });
     }
   };
@@ -81,8 +92,8 @@ const Matches = () => {
     try {
       const chatId = await userService.createOrGetChat(user.uid, otherUserId);
       navigate(`/messages?chatId=${encodeURIComponent(chatId)}`);
-    } catch (e) {
-      toast({ title: "Failed to open chat", variant: "destructive" });
+    } catch (e: any) {
+      toast({ title: "Failed to open chat", description: e?.message || e?.code || 'Unknown', variant: "destructive" });
     }
   };
 

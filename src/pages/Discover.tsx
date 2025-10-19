@@ -12,13 +12,18 @@ const Discover = () => {
   const { user } = useAuth();
   const [musicians, setMusicians] = useState<any[]>([]);
   const [filters, setFilters] = useState<any>({});
+  const [requestedUsers, setRequestedUsers] = useState<Set<string>>(new Set());
+  const [loading, setLoading] = useState(true);
 
   // Temporarily use a default center (NYC). Later: geolocation/user's own location.
   const center = useMemo(() => new GeoPoint(40.7128, -74.0060), []);
 
   useEffect(() => {
     const load = async () => {
+      if (!user) return;
+      setLoading(true);
       try {
+        // Load musicians
         const list = await userService.getNearbyUsers(center, {
           instrument: filters.instrument,
           genres: filters.genres,
@@ -26,6 +31,19 @@ const Discover = () => {
         }, filters.distance || 25);
         // Exclude current user
         const visible = list.filter((p: any) => p.user_id !== user?.uid);
+
+        // Load all existing requests to check which users have already been requested
+        const allRequests = await userService.getAllRequestsForUser(user.uid);
+        const requestedUserIds = new Set<string>();
+
+        allRequests.forEach((req: any) => {
+          if (req.requester_id === user.uid) {
+            requestedUserIds.add(req.receiver_id);
+          }
+        });
+
+        setRequestedUsers(requestedUserIds);
+
         setMusicians(visible.map((p: any) => ({
           id: p.user_id,
           name: p.name,
@@ -36,10 +54,13 @@ const Discover = () => {
           distance: (p as any).distance,
           imageUrl: p.image_url,
           bio: p.bio,
+          requested: requestedUserIds.has(p.user_id),
         })));
       } catch (e) {
         console.error('Failed to load musicians', e);
         toast({ title: 'Could not load musicians', variant: 'destructive' });
+      } finally {
+        setLoading(false);
       }
     };
     load();
@@ -47,10 +68,20 @@ const Discover = () => {
 
   const handleRequestChat = async (receiverId: string) => {
     if (!user) return;
+
+    // Check if already requested
+    if (requestedUsers.has(receiverId)) {
+      toast({ title: 'Already Requested', description: 'You have already sent a request to this user.' });
+      return;
+    }
+
     try {
       await userService.sendMatchRequest(user.uid, receiverId);
-      // Mark this musician as requested in local state so button disables
+
+      // Update local state to mark as requested
+      setRequestedUsers(prev => new Set([...prev, receiverId]));
       setMusicians(prev => prev.map(m => m.id === receiverId ? { ...m, requested: true } : m));
+
       toast({ title: 'Chat Request Sent!', description: 'They will see it in Matches.' });
     } catch (e) {
       console.error('Failed to send match request', e);
@@ -77,28 +108,38 @@ const Discover = () => {
 
         <FilterBar onFilterChange={setFilters} />
 
-        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
-          {musicians.map((musician, index) => (
-            <div
-              key={musician.id}
-              className="animate-fade-in"
-              style={{ animationDelay: `${index * 50}ms` }}
-            >
-              <MusicianCard
-                musician={musician}
-                onRequestChat={handleRequestChat}
-                onViewProfile={handleViewProfile}
-              />
-            </div>
-          ))}
-        </div>
-
-        {musicians.length === 0 && (
+        {loading ? (
           <div className="text-center py-20">
             <p className="text-xl text-muted-foreground">
-              No musicians found matching your filters
+              Loading musicians...
             </p>
           </div>
+        ) : (
+          <>
+            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+              {musicians.map((musician, index) => (
+                <div
+                  key={musician.id}
+                  className="animate-fade-in"
+                  style={{ animationDelay: `${index * 50}ms` }}
+                >
+                  <MusicianCard
+                    musician={musician}
+                    onRequestChat={handleRequestChat}
+                    onViewProfile={handleViewProfile}
+                  />
+                </div>
+              ))}
+            </div>
+
+            {musicians.length === 0 && (
+              <div className="text-center py-20">
+                <p className="text-xl text-muted-foreground">
+                  No musicians found matching your filters
+                </p>
+              </div>
+            )}
+          </>
         )}
       </div>
     </div>
