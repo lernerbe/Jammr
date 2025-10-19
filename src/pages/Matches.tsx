@@ -228,7 +228,14 @@ const Matches = () => {
                     </div>
 
                     <div className="flex items-center gap-2">
-                      <Button size="sm" onClick={() => handleOpenChat(match.requester_id === user?.uid ? match.receiver_id : match.requester_id)}>
+                      <Button 
+                        size="sm" 
+                        onClick={() => {
+                          if (!user) return;
+                          const otherId = match.requester_id === user.uid ? match.receiver_id : match.requester_id;
+                          handleOpenChat(otherId);
+                        }}
+                      >
                         <MessageCircle className="h-4 w-4 mr-2" />
                         Chat
                       </Button>

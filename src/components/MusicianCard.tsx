@@ -3,6 +3,7 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { useNavigate } from "react-router-dom";
 
 interface MusicianCardProps {
   musician: {
@@ -22,6 +23,7 @@ interface MusicianCardProps {
 }
 
 const MusicianCard = ({ musician, onRequestChat, onViewProfile }: MusicianCardProps) => {
+  const navigate = useNavigate();
   const initials = musician.name
     .split(" ")
     .map((n) => n[0])
@@ -42,7 +44,7 @@ const MusicianCard = ({ musician, onRequestChat, onViewProfile }: MusicianCardPr
   };
 
   return (
-    <Card className="overflow-hidden hover-lift cursor-pointer group">
+    <Card className="overflow-hidden hover-lift cursor-pointer group" onClick={() => navigate(`/profile/${musician.id}`)}>
       <div className="relative h-48 bg-gradient-to-br from-primary/20 to-secondary/20 overflow-hidden">
         {musician.imageUrl ? (
           <img
@@ -108,14 +110,20 @@ const MusicianCard = ({ musician, onRequestChat, onViewProfile }: MusicianCardPr
             variant="outline"
             size="sm"
             className="flex-1"
-            onClick={() => onViewProfile?.(musician.id)}
+            onClick={(e) => {
+              e.stopPropagation();
+              onViewProfile?.(musician.id);
+            }}
           >
             View Profile
           </Button>
           <Button
             size="sm"
             className="flex-1"
-            onClick={() => onRequestChat?.(musician.id)}
+            onClick={(e) => {
+              e.stopPropagation();
+              onRequestChat?.(musician.id);
+            }}
             disabled={musician.requested}
             variant={musician.requested ? 'outline' : 'default'}
           >
