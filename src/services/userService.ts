@@ -35,6 +35,12 @@ export const userService = {
 
   // Send a match/chat request
   async sendMatchRequest(requesterId: string, receiverId: string): Promise<string> {
+    // Check if request already exists to prevent duplicates
+    const existingRequest = await this.hasExistingRequest(requesterId, receiverId);
+    if (existingRequest) {
+      throw new Error('You have already sent a request to this user');
+    }
+
     const requestsRef = collection(db, MATCH_REQUESTS_COLLECTION);
     const docRef = await addDoc(requestsRef, {
       requester_id: requesterId,
