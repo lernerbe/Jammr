@@ -46,17 +46,17 @@ const Signup = () => {
     setLoading(true);
 
     try {
-      await signUp(email, password);
-      
+      const userCredential = await signUp(email, password);
+
       // Wait a moment for auth state to update
       await new Promise(resolve => setTimeout(resolve, 500));
-      
-      // Create initial profile in Firestore using the email as identifier
+
+      // Create initial profile in Firestore using the user ID
       const defaultLocation = new GeoPoint(40.7128, -74.0060); // Default to NYC
-      
-      // Note: We'll need to get the actual user ID after signup
-      if (true) {
-        await userService.createOrUpdateProfile(email, {
+
+      // Use the actual user ID from the auth result
+      if (userCredential) {
+        await userService.createOrUpdateProfile(userCredential.user.uid, {
           name: `${firstName} ${lastName}`.trim(),
           instrument: "Guitar", // Default instrument
           skill_level: "Beginner", // Default skill level
