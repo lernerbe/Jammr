@@ -8,10 +8,11 @@ import { useToast } from "@/hooks/use-toast";
 import { userService } from "@/services/userService";
 import { GeoPoint } from "firebase/firestore";
 import { useAuth } from "@/contexts/AuthContext";
+import { useNavigate } from "react-router-dom";
 
 const Discover = () => {
   const { toast } = useToast();
-
+  const navigate = useNavigate();
   const { user } = useAuth();
   const [musicians, setMusicians] = useState<any[]>([]);
   const [filters, setFilters] = useState<any>({});
@@ -94,10 +95,7 @@ const Discover = () => {
   };
 
   const handleViewProfile = (id: string) => {
-    toast({
-      title: "Profile View",
-      description: "Full profile details coming soon!",
-    });
+    navigate(`/profile/${id}`);
   };
 
   return (
