@@ -1,6 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
 import MusicianCard from "@/components/MusicianCard";
 import FilterBar from "@/components/FilterBar";
+import MatchesDialog from "@/components/MatchesDialog";
+import { Button } from "@/components/ui/button";
+import { Music } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { userService } from "@/services/userService";
 import { GeoPoint } from "firebase/firestore";
@@ -14,6 +17,7 @@ const Discover = () => {
   const [filters, setFilters] = useState<any>({});
   const [requestedUsers, setRequestedUsers] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
+  const [matchesDialogOpen, setMatchesDialogOpen] = useState(false);
 
   // Temporarily use a default center (NYC). Later: geolocation/user's own location.
   const center = useMemo(() => new GeoPoint(40.7128, -74.0060), []);
@@ -99,14 +103,26 @@ const Discover = () => {
   return (
     <div className="min-h-screen py-8">
       <div className="container px-4 space-y-8">
-        <div className="space-y-2">
-          <h1 className="text-4xl font-bold">Discover Musicians</h1>
-          <p className="text-muted-foreground text-lg">
-            Find talented musicians near you to collaborate and create music together
-          </p>
+        <div className="flex items-center justify-between">
+          <div className="space-y-2">
+            <h1 className="text-4xl font-bold">Discover Musicians</h1>
+            <p className="text-muted-foreground text-lg">
+              Find talented musicians near you to collaborate and create music together
+            </p>
+          </div>
+          <Button 
+            onClick={() => setMatchesDialogOpen(true)}
+            variant="outline"
+            className="gap-2"
+          >
+            <Music className="h-5 w-5" />
+            Matches
+          </Button>
         </div>
 
         <FilterBar onFilterChange={setFilters} />
+        
+        <MatchesDialog open={matchesDialogOpen} onOpenChange={setMatchesDialogOpen} />
 
         {loading ? (
           <div className="text-center py-20">

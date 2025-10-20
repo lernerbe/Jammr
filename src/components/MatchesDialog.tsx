@@ -5,12 +5,24 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { userService } from "@/services/userService";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
 
-const Matches = () => {
+interface MatchesDialogProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+}
+
+const MatchesDialog = ({ open, onOpenChange }: MatchesDialogProps) => {
   const { toast } = useToast();
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -19,7 +31,7 @@ const Matches = () => {
 
   useEffect(() => {
     const load = async () => {
-      if (!user) return;
+      if (!user || !open) return;
       try {
         // Fetch inbound requests and enrich with requester profile info
         const inbound = await userService.getInboundRequests(user.uid);
@@ -67,7 +79,7 @@ const Matches = () => {
       }
     };
     load();
-  }, [user, toast]);
+  }, [user, toast, open]);
 
   const handleAccept = async (id: string, name: string) => {
     try {
@@ -79,18 +91,21 @@ const Matches = () => {
       setPendingRequests(prev => prev.filter(r => r.id !== id));
 
       // Automatically open the chat
+      onOpenChange(false);
       setTimeout(() => {
         navigate(`/messages?chatId=${encodeURIComponent(chatId)}`);
-      }, 1000);
+      }, 500);
     } catch (e) {
       console.error('Failed to accept match request:', e);
       toast({ title: "Failed to accept", variant: "destructive" });
     }
   };
+
   const handleOpenChat = async (otherUserId: string) => {
     if (!user) return;
     try {
       const chatId = await userService.createOrGetChat(user.uid, otherUserId);
+      onOpenChange(false);
       navigate(`/messages?chatId=${encodeURIComponent(chatId)}`);
     } catch (e: any) {
       toast({ title: "Failed to open chat", description: e?.message || e?.code || 'Unknown', variant: "destructive" });
@@ -108,17 +123,17 @@ const Matches = () => {
   };
 
   return (
-    <div className="min-h-screen py-8">
-      <div className="container px-4 max-w-4xl">
-        <div className="space-y-2 mb-8">
-          <h1 className="text-4xl font-bold">Your Matches</h1>
-          <p className="text-muted-foreground text-lg">
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle className="text-2xl font-bold">Your Matches</DialogTitle>
+          <DialogDescription>
             Manage your connection requests and active matches
-          </p>
-        </div>
+          </DialogDescription>
+        </DialogHeader>
 
         <Tabs defaultValue="pending" className="w-full">
-          <TabsList className="grid w-full grid-cols-2 mb-8">
+          <TabsList className="grid w-full grid-cols-2 mb-4">
             <TabsTrigger value="pending" className="gap-2">
               <Clock className="h-4 w-4" />
               Pending ({pendingRequests.length})
@@ -129,19 +144,19 @@ const Matches = () => {
             </TabsTrigger>
           </TabsList>
 
-          <TabsContent value="pending" className="space-y-4">
+          <TabsContent value="pending" className="space-y-3">
             {pendingRequests.length === 0 ? (
-              <Card className="p-12 text-center">
-                <Clock className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
-                <p className="text-xl text-muted-foreground">No pending requests</p>
+              <Card className="p-8 text-center">
+                <Clock className="h-10 w-10 mx-auto mb-3 text-muted-foreground" />
+                <p className="text-muted-foreground">No pending requests</p>
               </Card>
             ) : (
               pendingRequests.map((request) => (
-                <Card key={request.id} className="p-6">
-                  <div className="flex items-center gap-4">
-                    <Avatar className="h-16 w-16 border-2 border-primary/20">
-                      <AvatarImage src="" />
-                      <AvatarFallback className="bg-primary/10 text-primary font-semibold text-lg">
+                <Card key={request.id} className="p-4">
+                  <div className="flex items-center gap-3">
+                    <Avatar className="h-12 w-12 border-2 border-primary/20">
+                      <AvatarImage src={request.imageUrl} />
+                      <AvatarFallback className="bg-primary/10 text-primary font-semibold">
                         {request.name
                           .split(" ")
                           .map((n) => n[0])
@@ -150,12 +165,9 @@ const Matches = () => {
                     </Avatar>
 
                     <div className="flex-1 min-w-0">
-                      <h3 className="font-semibold text-lg">{request.name}</h3>
+                      <h3 className="font-semibold">{request.name}</h3>
                       <p className="text-sm text-muted-foreground">
-                        {request.instrument} • {request.location}
-                      </p>
-                      <p className="text-xs text-muted-foreground mt-1">
-                        Sent {request.timestamp}
+                        {request.instrument}
                       </p>
                     </div>
 
@@ -181,23 +193,20 @@ const Matches = () => {
             )}
           </TabsContent>
 
-          <TabsContent value="accepted" className="space-y-4">
+          <TabsContent value="accepted" className="space-y-3">
             {acceptedMatches.length === 0 ? (
-              <Card className="p-12 text-center">
-                <Check className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
-                <p className="text-xl text-muted-foreground">No accepted matches yet</p>
+              <Card className="p-8 text-center">
+                <Check className="h-10 w-10 mx-auto mb-3 text-muted-foreground" />
+                <p className="text-muted-foreground">No accepted matches yet</p>
               </Card>
             ) : (
               acceptedMatches.map((match) => (
-                <Card
-                  key={match.id}
-                  className="p-6 hover-lift"
-                >
-                  <div className="flex items-center gap-4">
+                <Card key={match.id} className="p-4 hover-lift">
+                  <div className="flex items-center gap-3">
                     <div className="relative">
-                      <Avatar className="h-16 w-16 border-2 border-primary/20">
-                        <AvatarImage src="" />
-                        <AvatarFallback className="bg-primary/10 text-primary font-semibold text-lg">
+                      <Avatar className="h-12 w-12 border-2 border-primary/20">
+                        <AvatarImage src={match.imageUrl} />
+                        <AvatarFallback className="bg-primary/10 text-primary font-semibold">
                           {match.name
                             .split(" ")
                             .map((n) => n[0])
@@ -205,50 +214,44 @@ const Matches = () => {
                         </AvatarFallback>
                       </Avatar>
                       {match.unread && (
-                        <div className="absolute -top-1 -right-1 h-4 w-4 bg-primary rounded-full border-2 border-background" />
+                        <div className="absolute -top-1 -right-1 h-3 w-3 bg-primary rounded-full border-2 border-background" />
                       )}
                     </div>
 
                     <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-1">
-                        <h3 className="font-semibold text-lg">{match.name}</h3>
+                      <div className="flex items-center gap-2">
+                        <h3 className="font-semibold">{match.name}</h3>
                         {match.unread && (
                           <Badge variant="default" className="text-xs">
                             New
                           </Badge>
                         )}
                       </div>
-                      <p className="text-sm text-muted-foreground mb-1">
-                        {match.instrument} • {match.location}
+                      <p className="text-sm text-muted-foreground">
+                        {match.instrument}
                       </p>
-                      <p className="text-sm text-foreground/80 truncate">
-                        {match.lastMessage}
-                      </p>
-                      <p className="text-xs text-muted-foreground mt-1">{match.timestamp}</p>
                     </div>
 
-                    <div className="flex items-center gap-2">
-                      <Button 
-                        size="sm" 
-                        onClick={() => {
-                          if (!user) return;
-                          const otherId = match.requester_id === user.uid ? match.receiver_id : match.requester_id;
-                          handleOpenChat(otherId);
-                        }}
-                      >
-                        <MessageCircle className="h-4 w-4 mr-2" />
-                        Chat
-                      </Button>
-                    </div>
+                    <Button 
+                      size="sm" 
+                      onClick={() => {
+                        if (!user) return;
+                        const otherId = match.requester_id === user.uid ? match.receiver_id : match.requester_id;
+                        handleOpenChat(otherId);
+                      }}
+                    >
+                      <MessageCircle className="h-4 w-4 mr-2" />
+                      Chat
+                    </Button>
                   </div>
                 </Card>
               ))
             )}
           </TabsContent>
         </Tabs>
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 };
 
-export default Matches;
+export default MatchesDialog;

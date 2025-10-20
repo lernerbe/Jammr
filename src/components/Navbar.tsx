@@ -65,7 +65,7 @@ const Navbar = () => {
         <div className="flex items-center justify-around h-16 px-4">
           <Link
             to="/discover"
-            className={`flex flex-col items-center gap-1 min-w-[60px] transition-colors ${
+            className={`flex flex-col items-center gap-1 min-w-[70px] transition-colors ${
               isActive("/discover") ? "text-primary" : "text-muted-foreground"
             }`}
           >
@@ -73,17 +73,8 @@ const Navbar = () => {
             <span className="text-xs font-medium">Discover</span>
           </Link>
           <Link
-            to="/matches"
-            className={`flex flex-col items-center gap-1 min-w-[60px] transition-colors ${
-              isActive("/matches") ? "text-primary" : "text-muted-foreground"
-            }`}
-          >
-            <Music className="h-5 w-5" />
-            <span className="text-xs font-medium">Matches</span>
-          </Link>
-          <Link
             to="/messages"
-            className={`flex flex-col items-center gap-1 min-w-[60px] transition-colors ${
+            className={`flex flex-col items-center gap-1 min-w-[70px] transition-colors ${
               isActive("/messages") ? "text-primary" : "text-muted-foreground"
             }`}
           >
@@ -92,7 +83,7 @@ const Navbar = () => {
           </Link>
           <Link
             to="/profile"
-            className={`flex flex-col items-center gap-1 min-w-[60px] transition-colors ${
+            className={`flex flex-col items-center gap-1 min-w-[70px] transition-colors ${
               isActive("/profile") ? "text-primary" : "text-muted-foreground"
             }`}
           >
