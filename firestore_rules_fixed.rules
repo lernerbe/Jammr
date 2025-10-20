@@ -1,0 +1,86 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /users/{userId} {
+      allow read: if resource.data.visibility == true
+        || (request.auth != null && request.auth.uid == userId);
+      allow write: if request.auth != null && request.auth.uid == userId;
+    }
+
+    match /match_requests/{requestId} {
+      allow create: if request.auth != null
+        && request.resource.data.requester_id == request.auth.uid
+        && request.resource.data.receiver_id is string
+        && request.resource.data.status == 'pending'
+        && request.resource.data.created_at is timestamp;
+
+      allow read: if request.auth != null
+        && (resource.data.requester_id == request.auth.uid
+            || resource.data.receiver_id == request.auth.uid);
+
+      allow update: if request.auth != null
+        && (resource.data.requester_id == request.auth.uid
+            || resource.data.receiver_id == request.auth.uid)
+        && request.resource.data.diff(resource.data).changedKeys().hasOnly(['status'])
+        && request.resource.data.status in ['pending','accepted','declined'];
+    }
+
+   match /chats/{chatId} {
+      function authed() { return request.auth != null; }
+      function isParticipantOnExisting() {
+        return authed()
+          && resource.data.participants is list
+          && request.auth.uid in resource.data.participants;
+      }
+      function isParticipantOnWrite() {
+        return authed()
+          && request.resource.data.participants is list
+          && request.auth.uid in request.resource.data.participants
+          && request.resource.data.participants.size() == 2;
+      }
+
+      // Read existing chats only if participant - allow list queries
+      allow read: if authed();
+
+      // Create: must include participants[2] and created_at
+      allow create: if isParticipantOnWrite()
+        && request.resource.data.created_at is timestamp;
+
+      // Update: caller must already be a participant.
+      // Allow changing only safe, expected fields.
+      allow update: if isParticipantOnExisting()
+        && request.resource.data.diff(resource.data).changedKeys().hasOnly(
+             ['last_message', 'last_message_at', 'updated_at', 'typing']
+           )
+        && (!('updated_at' in request.resource.data)
+            || request.resource.data.updated_at is timestamp);
+
+      allow delete: if false;
+
+      match /messages/{messageId} {
+        // Helper function to check if user is participant in parent chat
+        function isParticipantInChat() {
+          return request.auth != null
+            && get(/databases/$(database)/documents/chats/$(chatId)).data.participants.hasAny([request.auth.uid]);
+        }
+
+        // Read messages if participant in parent chat
+        allow read: if isParticipantInChat();
+
+        // Create messages: must be from participant, require created_at,
+        // and allow either text OR media (image/audio), not just text.
+        allow create: if isParticipantInChat()
+          && request.resource.data.sender_id == request.auth.uid
+          && request.resource.data.created_at is timestamp
+          && (
+               (request.resource.data.text is string)
+            || (request.resource.data.image_url is string)
+            || (request.resource.data.audio_url is string)
+            // add other attachment fields as you support them
+          );
+
+        allow update, delete: if false;
+      }
+    }
+  }
+}

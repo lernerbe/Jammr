@@ -47,12 +47,16 @@ const Signup = () => {
 
     try {
       const userCredential = await signUp(email, password);
-      const user = userCredential.user;
-      
-      // Create initial profile in Firestore
-      if (user) {
-        const defaultLocation = new GeoPoint(40.7128, -74.0060); // Default to NYC
-        await userService.createOrUpdateProfile(user.uid, {
+
+      // Wait a moment for auth state to update
+      await new Promise(resolve => setTimeout(resolve, 500));
+
+      // Create initial profile in Firestore using the user ID
+      const defaultLocation = new GeoPoint(40.7128, -74.0060); // Default to NYC
+
+      // Use the actual user ID from the auth result
+      if (userCredential) {
+        await userService.createOrUpdateProfile(userCredential.user.uid, {
           name: `${firstName} ${lastName}`.trim(),
           instrument: "Guitar", // Default instrument
           skill_level: "Beginner", // Default skill level
@@ -61,7 +65,6 @@ const Signup = () => {
           genres: [],
           visibility: true,
           audio_clips: [],
-          ...(user.photoURL && { image_url: user.photoURL }), // Only include if photoURL exists
         });
       }
       

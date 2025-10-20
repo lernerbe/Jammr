@@ -1,4 +1,4 @@
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { Music, Search, MessageCircle, User, LogOut } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
@@ -13,11 +13,13 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 const Navbar = () => {
   const location = useLocation();
   const { user, logout } = useAuth();
+  const navigate = useNavigate();
   const isActive = (path: string) => location.pathname === path;
 
   const handleLogout = async () => {
     try {
       await logout();
+      navigate("/login");
     } catch (error) {
       console.error('Logout failed:', error);
     }
@@ -33,9 +35,9 @@ const Navbar = () => {
           </span>
         </Link>
 
-        {/* Desktop User Menu */}
+        {/* User Menu */}
         {user && (
-          <div className="hidden md:flex items-center gap-4">
+          <div className="flex items-center gap-4">
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" className="relative h-8 w-8 rounded-full">
@@ -63,7 +65,7 @@ const Navbar = () => {
         <div className="flex items-center justify-around h-16 px-4">
           <Link
             to="/discover"
-            className={`flex flex-col items-center gap-1 min-w-[60px] transition-colors ${
+            className={`flex flex-col items-center gap-1 min-w-[70px] transition-colors ${
               isActive("/discover") ? "text-primary" : "text-muted-foreground"
             }`}
           >
@@ -71,17 +73,8 @@ const Navbar = () => {
             <span className="text-xs font-medium">Discover</span>
           </Link>
           <Link
-            to="/matches"
-            className={`flex flex-col items-center gap-1 min-w-[60px] transition-colors ${
-              isActive("/matches") ? "text-primary" : "text-muted-foreground"
-            }`}
-          >
-            <Music className="h-5 w-5" />
-            <span className="text-xs font-medium">Matches</span>
-          </Link>
-          <Link
             to="/messages"
-            className={`flex flex-col items-center gap-1 min-w-[60px] transition-colors ${
+            className={`flex flex-col items-center gap-1 min-w-[70px] transition-colors ${
               isActive("/messages") ? "text-primary" : "text-muted-foreground"
             }`}
           >
@@ -90,7 +83,7 @@ const Navbar = () => {
           </Link>
           <Link
             to="/profile"
-            className={`flex flex-col items-center gap-1 min-w-[60px] transition-colors ${
+            className={`flex flex-col items-center gap-1 min-w-[70px] transition-colors ${
               isActive("/profile") ? "text-primary" : "text-muted-foreground"
             }`}
           >

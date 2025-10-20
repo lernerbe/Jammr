@@ -9,6 +9,9 @@ export default defineConfig(({ mode }) => ({
   server: {
     host: "::",
     port: 8080,
+    // Allow external hosts (e.g., ngrok/localtunnel) to access the dev server
+    // This avoids "Blocked request. This host is not allowed." errors
+    allowedHosts: true,
   },
   plugins: [
     react(),
