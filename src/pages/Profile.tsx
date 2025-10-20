@@ -232,6 +232,14 @@ const Profile = () => {
     }
   };
 
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen py-8">
       <div className="container px-4 max-w-4xl">
@@ -239,8 +247,8 @@ const Profile = () => {
           <div className="flex items-center justify-between">
             <h1 className="text-4xl font-bold">My Profile</h1>
             {!isEditing ? (
-              <Button onClick={() => setIsEditing(true)} disabled={loading}>
-                {loading ? "Loading..." : "Edit Profile"}
+              <Button onClick={() => setIsEditing(true)}>
+                Edit Profile
               </Button>
             ) : (
               <div className="flex gap-2">
@@ -258,12 +266,17 @@ const Profile = () => {
             )}
           </div>
 
-          <Card className="p-8">
-            <div className="space-y-8">
-              {/* Profile Picture */}
-              <div className="flex flex-col items-center gap-4">
-                <div className="relative">
-                  <Avatar className="h-32 w-32 border-4 border-primary/20">
+          {!isEditing ? (
+            // Read-only view - what others see
+            <div className="space-y-6">
+              {/* Hero section */}
+              <div className="relative h-48 rounded-t-lg bg-gradient-to-r from-primary/20 via-primary/10 to-accent/20 overflow-hidden">
+                <div className="absolute inset-0 bg-[url('/waveform-bg.jpg')] bg-cover bg-center opacity-20" />
+              </div>
+
+              <Card className="p-8 -mt-24 relative z-10">
+                <div className="flex flex-col items-center gap-4 mb-6">
+                  <Avatar className="h-32 w-32 border-4 border-background shadow-xl">
                     <AvatarImage src={profile.imageUrl} className="object-cover" />
                     <AvatarFallback className="bg-primary/10 text-primary font-semibold text-3xl">
                       {profile.name
@@ -272,135 +285,207 @@ const Profile = () => {
                         .join("")}
                     </AvatarFallback>
                   </Avatar>
-                  {isEditing && (
-                    <>
-                      <Button
-                        size="icon"
-                        variant="secondary"
-                        className="absolute bottom-0 right-0 rounded-full shadow-lg"
-                        asChild
-                      >
-                        <label className="cursor-pointer">
-                          <Camera className="h-4 w-4" />
-                          <input type="file" accept="image/*" className="hidden" onChange={handleProfileImageUpload} disabled={uploading} />
-                        </label>
-                      </Button>
-                    </>
-                  )}
+                  <div className="text-center">
+                    <h2 className="text-3xl font-bold mb-1">{profile.name}</h2>
+                    <p className="text-muted-foreground flex items-center gap-2 justify-center">
+                      <Music2 className="h-4 w-4" />
+                      {profile.instrument} • {profile.skillLevel}
+                    </p>
+                    <p className="text-sm text-muted-foreground mt-1">{profile.location}</p>
+                  </div>
                 </div>
-              </div>
 
-              {/* Basic Info */}
-              <div className="grid md:grid-cols-2 gap-6">
+                {/* Genres */}
+                {profile.selectedGenres.length > 0 && (
+                  <div className="mb-6">
+                    <h3 className="text-sm font-semibold mb-3 text-muted-foreground">GENRES</h3>
+                    <div className="flex flex-wrap gap-2">
+                      {profile.selectedGenres.map((genre) => (
+                        <Badge key={genre} variant="secondary">
+                          {genre}
+                        </Badge>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Bio */}
+                {profile.bio && (
+                  <div className="mb-6">
+                    <h3 className="text-sm font-semibold mb-3 text-muted-foreground">ABOUT</h3>
+                    <p className="text-muted-foreground whitespace-pre-wrap">{profile.bio}</p>
+                  </div>
+                )}
+
+                {/* Image Gallery */}
+                {profile.imageGallery.length > 0 && (
+                  <div className="mb-6">
+                    <h3 className="text-sm font-semibold mb-3 text-muted-foreground">GALLERY</h3>
+                    <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-3">
+                      {profile.imageGallery.map((src, idx) => (
+                        <div key={idx} className="aspect-square overflow-hidden rounded-md border">
+                          <img src={src} alt={`Gallery ${idx + 1}`} className="h-full w-full object-cover" />
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Video Clips */}
+                {profile.videoClips.length > 0 && (
+                  <div>
+                    <h3 className="text-sm font-semibold mb-3 text-muted-foreground">VIDEO CLIPS</h3>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+                      {profile.videoClips.map((src, idx) => (
+                        <div key={idx} className="aspect-video overflow-hidden rounded-md border">
+                          <video
+                            src={src}
+                            className="h-full w-full object-cover"
+                            controls
+                            preload="metadata"
+                            playsInline
+                            muted
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </Card>
+            </div>
+          ) : (
+            // Edit mode - original form
+            <Card className="p-8">
+              <div className="space-y-8">
+                {/* Profile Picture */}
+                <div className="flex flex-col items-center gap-4">
+                  <div className="relative">
+                    <Avatar className="h-32 w-32 border-4 border-primary/20">
+                      <AvatarImage src={profile.imageUrl} className="object-cover" />
+                      <AvatarFallback className="bg-primary/10 text-primary font-semibold text-3xl">
+                        {profile.name
+                          .split(" ")
+                          .map((n) => n[0])
+                          .join("")}
+                      </AvatarFallback>
+                    </Avatar>
+                    <Button
+                      size="icon"
+                      variant="secondary"
+                      className="absolute bottom-0 right-0 rounded-full shadow-lg"
+                      asChild
+                    >
+                      <label className="cursor-pointer">
+                        <Camera className="h-4 w-4" />
+                        <input type="file" accept="image/*" className="hidden" onChange={handleProfileImageUpload} disabled={uploading} />
+                      </label>
+                    </Button>
+                  </div>
+                </div>
+
+                {/* Basic Info */}
+                <div className="grid md:grid-cols-2 gap-6">
+                  <div className="space-y-2">
+                    <Label htmlFor="name">Full Name</Label>
+                    <Input
+                      id="name"
+                      value={profile.name}
+                      onChange={(e) => setProfile({ ...profile, name: e.target.value })}
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="location">Location</Label>
+                    <Input
+                      id="location"
+                      value={profile.location}
+                      onChange={(e) => setProfile({ ...profile, location: e.target.value })}
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="instrument">Primary Instrument</Label>
+                    <Select
+                      value={profile.instrument}
+                      onValueChange={(value) => setProfile({ ...profile, instrument: value })}
+                    >
+                      <SelectTrigger id="instrument">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {instruments.map((instrument) => (
+                          <SelectItem key={instrument} value={instrument}>
+                            {instrument}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="skill">Skill Level</Label>
+                    <Select
+                      value={profile.skillLevel}
+                      onValueChange={(value) => setProfile({ ...profile, skillLevel: value as "Beginner" | "Intermediate" | "Advanced" })}
+                    >
+                      <SelectTrigger id="skill">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {skillLevels.map((level) => (
+                          <SelectItem key={level} value={level}>
+                            {level}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                {/* Bio */}
                 <div className="space-y-2">
-                  <Label htmlFor="name">Full Name</Label>
-                  <Input
-                    id="name"
-                    value={profile.name}
-                    onChange={(e) => setProfile({ ...profile, name: e.target.value })}
-                    disabled={!isEditing}
+                  <Label htmlFor="bio">Bio</Label>
+                  <Textarea
+                    id="bio"
+                    value={profile.bio}
+                    onChange={(e) => setProfile({ ...profile, bio: e.target.value })}
+                    rows={4}
+                    placeholder="Tell other musicians about yourself, your experience, and what you're looking for..."
                   />
                 </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="location">Location</Label>
-                  <Input
-                    id="location"
-                    value={profile.location}
-                    onChange={(e) => setProfile({ ...profile, location: e.target.value })}
-                    disabled={!isEditing}
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="instrument">Primary Instrument</Label>
-                  <Select
-                    value={profile.instrument}
-                    onValueChange={(value) => setProfile({ ...profile, instrument: value })}
-                    disabled={!isEditing}
-                  >
-                    <SelectTrigger id="instrument">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {instruments.map((instrument) => (
-                        <SelectItem key={instrument} value={instrument}>
-                          {instrument}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="skill">Skill Level</Label>
-                  <Select
-                    value={profile.skillLevel}
-                    onValueChange={(value) => setProfile({ ...profile, skillLevel: value as "Beginner" | "Intermediate" | "Advanced" })}
-                    disabled={!isEditing}
-                  >
-                    <SelectTrigger id="skill">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {skillLevels.map((level) => (
-                        <SelectItem key={level} value={level}>
-                          {level}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-
-              {/* Bio */}
-              <div className="space-y-2">
-                <Label htmlFor="bio">Bio</Label>
-                <Textarea
-                  id="bio"
-                  value={profile.bio}
-                  onChange={(e) => setProfile({ ...profile, bio: e.target.value })}
-                  disabled={!isEditing}
-                  rows={4}
-                  placeholder="Tell other musicians about yourself, your experience, and what you're looking for..."
-                />
-              </div>
-
-              {/* Genres */}
-              <div className="space-y-3">
-                <Label>Genres {isEditing && "(click to toggle)"}</Label>
-                <div className="flex flex-wrap gap-2">
-                  {genres.map((genre) => (
-                    <Badge
-                      key={genre}
-                      variant={profile.selectedGenres.includes(genre) ? "default" : "outline"}
-                      className={isEditing ? "cursor-pointer" : ""}
-                      onClick={() => {
-                        if (isEditing) {
+                {/* Genres */}
+                <div className="space-y-3">
+                  <Label>Genres (click to toggle)</Label>
+                  <div className="flex flex-wrap gap-2">
+                    {genres.map((genre) => (
+                      <Badge
+                        key={genre}
+                        variant={profile.selectedGenres.includes(genre) ? "default" : "outline"}
+                        className="cursor-pointer"
+                        onClick={() => {
                           setProfile({
                             ...profile,
                             selectedGenres: profile.selectedGenres.includes(genre)
                               ? profile.selectedGenres.filter((g) => g !== genre)
                               : [...profile.selectedGenres, genre],
                           });
-                        }
-                      }}
-                    >
-                      {genre}
-                    </Badge>
-                  ))}
+                        }}
+                      >
+                        {genre}
+                      </Badge>
+                    ))}
+                  </div>
                 </div>
-              </div>
 
-              {/* Media Uploads */}
-              <div className="space-y-3">
-                <Label>Media</Label>
-                <Card className="p-8 text-center border-dashed">
-                  <Music2 className="h-12 w-12 mx-auto mb-3 text-muted-foreground" />
-                  <p className="text-sm text-muted-foreground mb-4">
-                    Upload audio or video clips to showcase your skills
-                  </p>
-                  {isEditing && (
+                {/* Media Uploads */}
+                <div className="space-y-3">
+                  <Label>Media</Label>
+                  <Card className="p-8 text-center border-dashed">
+                    <Music2 className="h-12 w-12 mx-auto mb-3 text-muted-foreground" />
+                    <p className="text-sm text-muted-foreground mb-4">
+                      Upload audio or video clips to showcase your skills
+                    </p>
                     <div className="flex items-center justify-center gap-3 flex-wrap">
                       <Button asChild variant="outline" disabled={uploading}>
                         <label className="cursor-pointer">
@@ -417,14 +502,12 @@ const Profile = () => {
                         </label>
                       </Button>
                     </div>
-                  )}
-                </Card>
-                {profile.imageGallery.length > 0 && (
-                  <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-3">
-                    {profile.imageGallery.map((src, idx) => (
-                      <div key={idx} className="group relative aspect-square overflow-hidden rounded-md border">
-                        <img src={src} alt={`Gallery ${idx + 1}`} className="h-full w-full object-cover" />
-                        {isEditing && (
+                  </Card>
+                  {profile.imageGallery.length > 0 && (
+                    <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-3">
+                      {profile.imageGallery.map((src, idx) => (
+                        <div key={idx} className="group relative aspect-square overflow-hidden rounded-md border">
+                          <img src={src} alt={`Gallery ${idx + 1}`} className="h-full w-full object-cover" />
                           <button
                             type="button"
                             onClick={() => handleDeleteGalleryImage(src)}
@@ -434,24 +517,22 @@ const Profile = () => {
                           >
                             <Trash2 className="h-4 w-4" />
                           </button>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                )}
-                {profile.videoClips.length > 0 && (
-                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
-                    {profile.videoClips.map((src, idx) => (
-                      <div key={idx} className="group relative aspect-video overflow-hidden rounded-md border">
-                        <video
-                          src={src}
-                          className="h-full w-full object-cover"
-                          controls
-                          preload="metadata"
-                          playsInline
-                          muted
-                        />
-                        {isEditing && (
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  {profile.videoClips.length > 0 && (
+                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+                      {profile.videoClips.map((src, idx) => (
+                        <div key={idx} className="group relative aspect-video overflow-hidden rounded-md border">
+                          <video
+                            src={src}
+                            className="h-full w-full object-cover"
+                            controls
+                            preload="metadata"
+                            playsInline
+                            muted
+                          />
                           <button
                             type="button"
                             onClick={() => handleDeleteVideo(src)}
@@ -461,14 +542,14 @@ const Profile = () => {
                           >
                             <Trash2 className="h-4 w-4" />
                           </button>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
               </div>
-            </div>
-          </Card>
+            </Card>
+          )}
         </div>
       </div>
     </div>
