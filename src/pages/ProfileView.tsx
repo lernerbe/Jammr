@@ -9,6 +9,7 @@ import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { userService } from "@/services/userService";
+import { geocodingService } from "@/services/geocodingService";
 import { UserProfile } from "@/types/user";
 
 const ProfileView = () => {
@@ -20,6 +21,8 @@ const ProfileView = () => {
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
   const [hasSentRequest, setHasSentRequest] = useState(false);
+  const [locationName, setLocationName] = useState<string>("");
+  const [locationLoading, setLocationLoading] = useState(false);
 
   useEffect(() => {
     const loadProfile = async () => {
@@ -29,6 +32,24 @@ const ProfileView = () => {
       try {
         const userProfile = await userService.getUserProfile(userId);
         setProfile(userProfile);
+
+        // Convert coordinates to place name
+        if (userProfile) {
+          setLocationLoading(true);
+          try {
+            const placeName = await geocodingService.getPlaceNameFromCoordinates(
+              userProfile.location.latitude,
+              userProfile.location.longitude
+            );
+            setLocationName(placeName);
+          } catch (error) {
+            console.error('Error converting coordinates to place name:', error);
+            // Fallback to coordinates if geocoding fails
+            setLocationName(`${userProfile.location.latitude.toFixed(2)}, ${userProfile.location.longitude.toFixed(2)}`);
+          } finally {
+            setLocationLoading(false);
+          }
+        }
 
         // Check if we've already sent a request
         if (user) {
@@ -132,7 +153,7 @@ const ProfileView = () => {
                     </div>
                     <div className="flex items-center gap-1">
                       <MapPin className="h-4 w-4" />
-                      <span>{profile.location.latitude.toFixed(2)}, {profile.location.longitude.toFixed(2)}</span>
+                      <span>{locationLoading ? "Loading location..." : locationName}</span>
                     </div>
                   </div>
                 </div>

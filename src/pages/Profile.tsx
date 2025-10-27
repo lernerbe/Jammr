@@ -17,6 +17,7 @@ import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { userService } from "@/services/userService";
+import { geocodingService } from "@/services/geocodingService";
 import { UserProfile } from "@/types/user";
 import { GeoPoint } from "firebase/firestore";
 
@@ -43,6 +44,7 @@ const Profile = () => {
     imageGallery: [] as string[],
     videoClips: [] as string[],
   });
+  const [locationLoading, setLocationLoading] = useState(false);
 
   const handleProfileImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!user) return;
@@ -145,17 +147,42 @@ const Profile = () => {
       try {
         const userProfile = await userService.getUserProfile(user.uid);
         if (userProfile) {
-          setProfile({
-            name: userProfile.name,
-            instrument: userProfile.instrument,
-            skillLevel: userProfile.skill_level,
-            bio: userProfile.bio,
-            location: `${userProfile.location.latitude}, ${userProfile.location.longitude}`, // Simplified for now
-            selectedGenres: userProfile.genres,
-            imageUrl: userProfile.image_url || user?.photoURL || "",
-            imageGallery: userProfile.image_gallery || [],
-            videoClips: userProfile.video_clips || [],
-          });
+          // Convert coordinates to place name
+          setLocationLoading(true);
+          try {
+            const placeName = await geocodingService.getPlaceNameFromCoordinates(
+              userProfile.location.latitude,
+              userProfile.location.longitude
+            );
+            
+            setProfile({
+              name: userProfile.name,
+              instrument: userProfile.instrument,
+              skillLevel: userProfile.skill_level,
+              bio: userProfile.bio,
+              location: placeName,
+              selectedGenres: userProfile.genres,
+              imageUrl: userProfile.image_url || user?.photoURL || "",
+              imageGallery: userProfile.image_gallery || [],
+              videoClips: userProfile.video_clips || [],
+            });
+          } catch (error) {
+            console.error('Error converting coordinates to place name:', error);
+            // Fallback to coordinates if geocoding fails
+            setProfile({
+              name: userProfile.name,
+              instrument: userProfile.instrument,
+              skillLevel: userProfile.skill_level,
+              bio: userProfile.bio,
+              location: `${userProfile.location.latitude.toFixed(2)}, ${userProfile.location.longitude.toFixed(2)}`,
+              selectedGenres: userProfile.genres,
+              imageUrl: userProfile.image_url || user?.photoURL || "",
+              imageGallery: userProfile.image_gallery || [],
+              videoClips: userProfile.video_clips || [],
+            });
+          } finally {
+            setLocationLoading(false);
+          }
         } else {
           // Set default values from Firebase Auth
           setProfile(prev => ({
@@ -186,16 +213,31 @@ const Profile = () => {
     
     setSaving(true);
     try {
-      // For now, use a default location (New York coordinates)
-      // TODO: Implement geolocation service
-      const defaultLocation = new GeoPoint(40.7128, -74.0060);
+      // Convert place name to coordinates
+      setLocationLoading(true);
+      let location: GeoPoint;
+      
+      try {
+        location = await geocodingService.getCoordinatesFromPlaceName(profile.location);
+      } catch (error) {
+        console.error('Error converting place name to coordinates:', error);
+        // Fallback to New York coordinates if geocoding fails
+        location = new GeoPoint(40.7128, -74.0060);
+        toast({
+          title: "Location conversion failed",
+          description: "Using default location. Please check your location format.",
+          variant: "destructive",
+        });
+      } finally {
+        setLocationLoading(false);
+      }
       
       const profileData: Partial<UserProfile> = {
         name: profile.name,
         instrument: profile.instrument,
         skill_level: profile.skillLevel,
         bio: profile.bio,
-        location: defaultLocation,
+        location: location,
         genres: profile.selectedGenres,
         visibility: true,
         audio_clips: [],
@@ -291,7 +333,9 @@ const Profile = () => {
                       <Music2 className="h-4 w-4" />
                       {profile.instrument} • {profile.skillLevel}
                     </p>
-                    <p className="text-sm text-muted-foreground mt-1">{profile.location}</p>
+                    <p className="text-sm text-muted-foreground mt-1">
+                      {locationLoading ? "Loading location..." : profile.location}
+                    </p>
                   </div>
                 </div>
 
