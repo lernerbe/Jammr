@@ -125,14 +125,19 @@ const ProfileView = () => {
               <div className="flex-1 space-y-4">
                 <div>
                   <h1 className="text-3xl md:text-4xl font-bold mb-2">{profile.name}</h1>
-                  <div className="flex flex-wrap gap-3 text-muted-foreground">
+                  <div className="text-muted-foreground">
+                    <div className="flex items-center gap-1 mb-2">
+                      <MapPin className="h-4 w-4" />
+                      <span>
+                        {profile.location
+                          ? `${profile.location.latitude.toFixed(2)}, ${profile.location.longitude.toFixed(2)}`
+                          : 'Location unknown'}
+                      </span>
+                    </div>
+
                     <div className="flex items-center gap-1">
                       <Music2 className="h-4 w-4" />
                       <span>{profile.instrument}</span>
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <MapPin className="h-4 w-4" />
-                      <span>{profile.location.latitude.toFixed(2)}, {profile.location.longitude.toFixed(2)}</span>
                     </div>
                   </div>
                 </div>
