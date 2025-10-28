@@ -24,31 +24,23 @@ const Discover = () => {
   const center = useMemo(() => new GeoPoint(40.7128, -74.0060), []);
 
   useEffect(() => {
-    const load = async () => {
-      if (!user) return;
-      setLoading(true);
-      try {
-        // Load musicians
-        const list = await userService.getNearbyUsers(center, {
-          instrument: filters.instrument,
-          genres: filters.genres,
-          skillLevel: filters.skillLevel,
-        }, filters.distance || 25);
-        // Exclude current user
-        const visible = list.filter((p: any) => p.user_id !== user?.uid);
+    if (!user) return;
+    setLoading(true);
 
-        // Load all existing requests to check which users have already been requested
-        const allRequests = await userService.getAllRequestsForUser(user.uid);
-        const requestedUserIds = new Set<string>();
+    // subscribe to nearby users
+    const unsubscribe = userService.subscribeToNearbyUsers(
+      center,
+      {
+        instrument: filters.instrument,
+        genres: filters.genres,
+        skillLevel: filters.skillLevel,
+      },
+      filters.distance || 25,
+      (userProfiles) => {
+        // Exclude current logged-in user
+        const visible = userProfiles.filter(p => p.user_id !== user.uid);
 
-        allRequests.forEach((req: any) => {
-          if (req.requester_id === user.uid) {
-            requestedUserIds.add(req.receiver_id);
-          }
-        });
-
-        setRequestedUsers(requestedUserIds);
-
+        // Map to UI shape
         setMusicians(visible.map((p: any) => ({
           id: p.user_id,
           name: p.name,
@@ -56,20 +48,33 @@ const Discover = () => {
           genres: p.genres,
           skillLevel: p.skill_level,
           location: "",
-          distance: (p as any).distance,
+          distance: p.distance,
           imageUrl: p.image_url,
           bio: p.bio,
-          requested: requestedUserIds.has(p.user_id),
+          requested: requestedUsers.has(p.user_id),
         })));
-      } catch (e) {
-        console.error('Failed to load musicians', e);
+
+        setLoading(false);
+      },
+      (err) => {
+        console.error('subscribeToNearbyUsers error', err);
         toast({ title: 'Could not load musicians', variant: 'destructive' });
-      } finally {
         setLoading(false);
       }
-    };
-    load();
-  }, [center, filters, toast, user?.uid]);
+    );
+
+    // Load requests once (you can also subscribe if needed)
+    (async () => {
+      const allRequests = await userService.getAllRequestsForUser(user.uid);
+      const requestedUserIds = new Set<string>();
+      allRequests.forEach((req: any) => {
+        if (req.requester_id === user.uid) requestedUserIds.add(req.receiver_id);
+      });
+      setRequestedUsers(requestedUserIds);
+    })();
+
+    return () => unsubscribe();
+  }, [center, filters, toast, user?.uid]); // keep same array deps
 
   const handleRequestChat = async (receiverId: string) => {
     if (!user) return;
