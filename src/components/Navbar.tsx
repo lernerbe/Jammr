@@ -37,6 +37,39 @@ const Navbar = () => {
             </span>
           </Link>
 
+          {/* Main Tabs (moved from bottom nav to top header) */}
+          {user && (
+            <div className="hidden sm:flex items-center gap-6">
+              <Link
+                to="/discover"
+                className={`flex flex-col items-center gap-1 min-w-[70px] transition-colors ${
+                  isActive("/discover") ? "text-primary" : "text-muted-foreground"
+                }`}
+              >
+                <Search className="h-5 w-5" />
+                <span className="text-xs font-medium">Discover</span>
+              </Link>
+              <Link
+                to="/messages"
+                className={`flex flex-col items-center gap-1 min-w-[70px] transition-colors ${
+                  isActive("/messages") ? "text-primary" : "text-muted-foreground"
+                }`}
+              >
+                <MessageCircle className="h-5 w-5" />
+                <span className="text-xs font-medium">Messages</span>
+              </Link>
+              <Link
+                to="/profile"
+                className={`flex flex-col items-center gap-1 min-w-[70px] transition-colors ${
+                  isActive("/profile") ? "text-primary" : "text-muted-foreground"
+                }`}
+              >
+                <User className="h-5 w-5" />
+                <span className="text-xs font-medium">Profile</span>
+              </Link>
+            </div>
+          )}
+
           {/* User Menu */}
           {user && (
             <div className="flex items-center gap-4">
@@ -62,41 +95,6 @@ const Navbar = () => {
           )}
         </nav>
       </header>
-
-      {/* Bottom Navigation - Main Tabs */}
-      {user && (
-        <div className="fixed bottom-0 left-0 right-0 z-50 border-t border-border bg-background/95 backdrop-blur-md supports-[backdrop-filter]:bg-background/80">
-          <div className="flex items-center justify-around h-16 px-4 pb-safe">
-            <Link
-              to="/discover"
-              className={`flex flex-col items-center gap-1 min-w-[70px] transition-colors ${
-                isActive("/discover") ? "text-primary" : "text-muted-foreground"
-              }`}
-            >
-              <Search className="h-5 w-5" />
-              <span className="text-xs font-medium">Discover</span>
-            </Link>
-            <Link
-              to="/messages"
-              className={`flex flex-col items-center gap-1 min-w-[70px] transition-colors ${
-                isActive("/messages") ? "text-primary" : "text-muted-foreground"
-              }`}
-            >
-              <MessageCircle className="h-5 w-5" />
-              <span className="text-xs font-medium">Messages</span>
-            </Link>
-            <Link
-              to="/profile"
-              className={`flex flex-col items-center gap-1 min-w-[70px] transition-colors ${
-                isActive("/profile") ? "text-primary" : "text-muted-foreground"
-              }`}
-            >
-              <User className="h-5 w-5" />
-              <span className="text-xs font-medium">Profile</span>
-            </Link>
-          </div>
-        </div>
-      )}
     </>
   );
 };
