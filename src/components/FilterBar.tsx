@@ -41,6 +41,7 @@ interface FilterBarProps {
 
 const FilterBar = ({ onFilterChange }: FilterBarProps) => {
   const [distance, setDistance] = React.useState([25]);
+  const [searchQuery, setSearchQuery] = React.useState("");
   const [selectedGenres, setSelectedGenres] = React.useState<string[]>([]);
   const [instrument, setInstrument] = React.useState<string | undefined>(undefined);
   const [skillLevel, setSkillLevel] = React.useState<string | undefined>(undefined);
@@ -54,11 +55,26 @@ const FilterBar = ({ onFilterChange }: FilterBarProps) => {
   return (
     <div className="w-full space-y-4">
       <div className="flex gap-3">
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+  <div className="relative flex-none w-full sm:w-1/2 flex items-center">
+          <Button
+            variant="ghost"
+            size="icon"
+            className="absolute left-2 top-1/2 -translate-y-1/2 text-muted-foreground"
+            onClick={() => onFilterChange?.({ instrument, skillLevel, genres: selectedGenres, distance: distance[0], searchQuery })}
+            aria-label="Search"
+          >
+            <Search className="h-4 w-4" />
+          </Button>
           <Input
             placeholder="Search musicians..."
             className="pl-10"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                onFilterChange?.({ instrument, skillLevel, genres: selectedGenres, distance: distance[0], searchQuery });
+              }
+            }}
           />
         </div>
 

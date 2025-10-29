@@ -54,6 +54,34 @@ const Discover = () => {
           requested: requestedUsers.has(p.user_id),
         })));
 
+        // searchQuery filter: NEEDS TESTING OR MODIFICATIONS!!
+          let mapped = visible.map((p: any) => ({
+            id: p.user_id,
+            name: p.name,
+            instrument: p.instrument,
+            genres: p.genres,
+            skillLevel: p.skill_level,
+            location: "",
+            distance: p.distance,
+            imageUrl: p.image_url,
+            bio: p.bio,
+            requested: requestedUsers.has(p.user_id),
+          }));
+
+          // Apply searchQuery filter (match words in the user's name)
+          if (filters?.searchQuery) {
+            const query = String(filters.searchQuery).toLowerCase().trim();
+            const tokens = query.split(/\s+/).filter(Boolean);
+            if (tokens.length > 0) {
+              mapped = mapped.filter((m) => {
+                const name = (m.name || "").toLowerCase();
+                // require that every token appears somewhere in the name
+                return tokens.every((t) => name.includes(t));
+              });
+            }
+          }
+          setMusicians(mapped);
+
         setLoading(false);
       },
       (err) => {
