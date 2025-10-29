@@ -30,7 +30,7 @@ const Navbar = () => {
       {/* Top Header - Logo and User Menu */}
       <header className="sticky top-0 z-50 w-full border-b border-border bg-background/95 backdrop-blur-md supports-[backdrop-filter]:bg-background/80">
         <nav className="container flex h-14 items-center justify-between px-4">
-          <Link to="/" className="flex items-center gap-2">
+          <Link to="/discover/" className="flex items-center gap-2">
             <Music className="h-6 w-6 text-primary" />
             <span className="text-xl font-bold bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
               Jammr
@@ -87,8 +87,9 @@ const Navbar = () => {
                 <DropdownMenuContent className="w-56" align="end" forceMount>
                   <DropdownMenuItem onClick={handleLogout}>
                     <LogOut className="mr-2 h-4 w-4" />
-                    <span>Log out</span>
+                    <span>Log out</span> 
                   </DropdownMenuItem>
+                  {/*TODO: add account settings, toggle darkmode here*/}
                 </DropdownMenuContent>
               </DropdownMenu>
             </div>
