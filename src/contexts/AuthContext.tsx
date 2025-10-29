@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import {
   User,
+  UserCredential,
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
   signOut,
@@ -16,7 +17,7 @@ interface AuthContextType {
   loading: boolean;
   signIn: (email: string, password: string) => Promise<void>;
   signUp: (email: string, password: string) => Promise<any>;
-  signInWithGoogle: () => Promise<void>;
+  signInWithGoogle: () => Promise<UserCredential>;
   logout: () => Promise<void>;
 }
 
@@ -69,12 +70,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     return await createUserWithEmailAndPassword(auth, email, password);
   };
 
-  const signInWithGoogle = async () => {
+  const signInWithGoogle = async (): Promise<UserCredential> => {
     if (!auth) throw new Error('Firebase not configured. Please set up your .env file.');
     const provider = new GoogleAuthProvider();
 
     try {
-      await signInWithPopup(auth, provider);
+      return await signInWithPopup(auth, provider);
     } catch (error: unknown) {
       // Handle account linking scenarios
       if (error && typeof error === 'object' && 'code' in error && error.code === 'auth/account-exists-with-different-credential') {

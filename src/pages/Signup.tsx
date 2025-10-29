@@ -9,6 +9,8 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { userService } from "@/services/userService";
 import { GeoPoint } from "firebase/firestore";
+import { LocationAutocomplete } from "@/components/LocationAutocomplete";
+import { LocationData } from "@/types/user";
 import waveformBg from "@/assets/waveform-bg.jpg";
 
 const Signup = () => {
@@ -17,6 +19,8 @@ const Signup = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [location, setLocation] = useState("");
+  const [selectedLocation, setSelectedLocation] = useState<LocationData | null>(null);
   const [loading, setLoading] = useState(false);
   const { signUp, signInWithGoogle } = useAuth();
   const { toast } = useToast();
@@ -43,6 +47,15 @@ const Signup = () => {
       return;
     }
 
+    if (!selectedLocation) {
+      toast({
+        title: "Location required",
+        description: "Please select a location from the suggestions.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setLoading(true);
 
     try {
@@ -51,9 +64,6 @@ const Signup = () => {
       // Wait a moment for auth state to update
       await new Promise(resolve => setTimeout(resolve, 500));
 
-      // Create initial profile in Firestore using the user ID
-      const defaultLocation = new GeoPoint(40.7128, -74.0060); // Default to NYC
-
       // Use the actual user ID from the auth result
       if (userCredential) {
         await userService.createOrUpdateProfile(userCredential.user.uid, {
@@ -61,7 +71,7 @@ const Signup = () => {
           instrument: "Guitar", // Default instrument
           skill_level: "Beginner", // Default skill level
           bio: "",
-          location: defaultLocation,
+          location: selectedLocation,
           genres: [],
           visibility: true,
           audio_clips: [],
@@ -84,13 +94,45 @@ const Signup = () => {
     }
   };
 
+  const handleLocationSelect = (locationData: LocationData) => {
+    setSelectedLocation(locationData);
+    setLocation(locationData.location);
+  };
+
   const handleGoogleSignIn = async () => {
     setLoading(true);
     try {
-      await signInWithGoogle();
+      const userCredential = await signInWithGoogle();
+      
+      // Wait a moment for auth state to update
+      await new Promise(resolve => setTimeout(resolve, 500));
+
+      // Create initial profile in Firestore using the user ID with default location
+      const defaultLocation: LocationData = {
+        location: "New York, NY, United States",
+        coords: {
+          lat: 40.7128,
+          lng: -74.0060,
+        },
+        place_id: `place_${Math.random().toString(36).substr(2, 9)}_${Date.now()}`,
+      };
+
+      if (userCredential && userCredential.user) {
+        await userService.createOrUpdateProfile(userCredential.user.uid, {
+          name: userCredential.user.displayName || userCredential.user.email?.split('@')[0] || "User",
+          instrument: "Guitar", // Default instrument
+          skill_level: "Beginner", // Default skill level
+          bio: "",
+          location: defaultLocation,
+          genres: [],
+          visibility: true,
+          audio_clips: [],
+        });
+      }
+      
       toast({
         title: "Welcome!",
-        description: "You've successfully signed up with Google.",
+        description: "You've successfully signed up with Google. Please complete your profile.",
       });
       navigate("/profile");
     } catch (error: any) {
@@ -179,6 +221,15 @@ const Signup = () => {
                 required
               />
             </div>
+
+            <LocationAutocomplete
+              value={location}
+              onChange={setLocation}
+              onLocationSelect={handleLocationSelect}
+              placeholder="Enter your city, state, country"
+              label="Location"
+              required
+            />
 
             <Button className="w-full" size="lg" type="submit" disabled={loading}>
               {loading ? "Creating account..." : "Create Account"}
