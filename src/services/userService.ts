@@ -16,7 +16,7 @@ import {
 } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
 import { db, storage } from '@/lib/firebase';
-import { UserProfile, FilterOptions } from '@/types/user';
+import { UserProfile, FilterOptions, LocationData } from '@/types/user';
 
 const USERS_COLLECTION = 'users';
 const MATCH_REQUESTS_COLLECTION = 'match_requests';
@@ -26,11 +26,20 @@ export const userService = {
   // Create or update user profile
   async createOrUpdateProfile(userId: string, profileData: Partial<UserProfile>): Promise<void> {
     const userRef = doc(db, USERS_COLLECTION, userId);
-    await setDoc(userRef, {
+
+    // Check if profile already exists
+    const existingDoc = await getDoc(userRef);
+    const updateData: any = {
       ...profileData,
       user_id: userId,
-      created_at: Timestamp.now(),
-    }, { merge: true });
+    };
+
+    // Only set created_at for new profiles
+    if (!existingDoc.exists()) {
+      updateData.created_at = Timestamp.now();
+    }
+
+    await setDoc(userRef, updateData, { merge: true });
   },
 
   // Send a match/chat request
@@ -249,6 +258,8 @@ export const userService = {
     filters: FilterOptions = {},
     maxDistance: number = 25
   ): Promise<UserProfile[]> {
+    console.log('getNearbyUsers called with:', { userLocation, filters, maxDistance });
+
     const usersRef = collection(db, USERS_COLLECTION);
     let q = query(
       usersRef,
@@ -256,15 +267,25 @@ export const userService = {
       limit(50) // Firestore limit
     );
 
+    console.log('Executing Firestore query...');
     const querySnapshot = await getDocs(q);
     const users: UserProfile[] = [];
+
+    console.log(`Found ${querySnapshot.size} users with visibility=true`);
 
     querySnapshot.forEach((doc) => {
       const data = doc.data();
       const userProfile: UserProfile = {
         ...data,
-        created_at: data.created_at.toDate(),
+        created_at: data.created_at?.toDate ? data.created_at.toDate() : new Date(),
       } as UserProfile;
+
+      console.log(`Processing user ${userProfile.user_id}:`, {
+        name: userProfile.name,
+        location: userProfile.location,
+        visibility: data.visibility,
+        created_at: userProfile.created_at
+      });
 
       // Apply filters
       if (filters.instrument && userProfile.instrument !== filters.instrument) {
@@ -283,7 +304,11 @@ export const userService = {
       }
 
       // Calculate distance (simplified - in production, use proper geospatial queries)
-      const distance = this.calculateDistance(userLocation, userProfile.location);
+      const profileLocation = this.convertToGeoPoint(userProfile.location);
+      const distance = this.calculateDistance(userLocation, profileLocation);
+
+      console.log(`User ${userProfile.user_id} distance: ${distance} miles (max: ${maxDistance})`);
+
       if (distance <= maxDistance) {
         users.push({
           ...userProfile,
@@ -294,7 +319,9 @@ export const userService = {
     });
 
     // Sort by distance
-    return users.sort((a, b) => (a as any).distance - (b as any).distance);
+    const sortedUsers = users.sort((a, b) => (a as any).distance - (b as any).distance);
+    console.log(`Returning ${sortedUsers.length} users within ${maxDistance} miles`);
+    return sortedUsers;
   },
 
   // Upload audio clip
@@ -371,5 +398,48 @@ export const userService = {
 
   toRadians(degrees: number): number {
     return degrees * (Math.PI / 180);
+  },
+
+  // Convert LocationData or GeoPoint to GeoPoint for distance calculation
+  convertToGeoPoint(location: LocationData | GeoPoint): GeoPoint {
+    if (location instanceof GeoPoint) {
+      return location;
+    }
+
+    // Handle LocationData format
+    if (location && typeof location === 'object' && 'coords' in location) {
+      return new GeoPoint(location.coords.lat, location.coords.lng);
+    }
+
+    // Fallback - treat as GeoPoint-like object with latitude/longitude
+    if (location && typeof location === 'object' && 'latitude' in location && 'longitude' in location) {
+      return new GeoPoint((location as any).latitude, (location as any).longitude);
+    }
+
+    // Default fallback to NYC coordinates if location format is unrecognized
+    console.warn('Unrecognized location format, using default coordinates');
+    return new GeoPoint(40.7128, -74.0060);
+  },
+
+  // Debug function to check all users in database
+  async debugAllUsers(): Promise<void> {
+    console.log('=== DEBUG: Checking all users in database ===');
+    const usersRef = collection(db, USERS_COLLECTION);
+    const allUsersQuery = query(usersRef, limit(100));
+    const snapshot = await getDocs(allUsersQuery);
+
+    console.log(`Total users in database: ${snapshot.size}`);
+
+    snapshot.forEach((doc) => {
+      const data = doc.data();
+      console.log(`User ID: ${doc.id}`, {
+        name: data.name,
+        visibility: data.visibility,
+        created_at: data.created_at,
+        location: data.location,
+        hasLocationCoords: !!(data.location && data.location.coords)
+      });
+    });
+    console.log('=== END DEBUG ===');
   },
 };

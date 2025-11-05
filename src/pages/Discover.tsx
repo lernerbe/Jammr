@@ -20,13 +20,35 @@ const Discover = () => {
   const [requestedUsers, setRequestedUsers] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
   const [matchesDialogOpen, setMatchesDialogOpen] = useState(false);
+  const [center, setCenter] = useState<GeoPoint | null>(null);
 
-  // Temporarily use a default center (NYC). Later: geolocation/user's own location.
-  const center = useMemo(() => new GeoPoint(40.7128, -74.0060), []);
+  // Get current user's location
+  useEffect(() => {
+    const getCurrentUserLocation = async () => {
+      if (!user) return;
+
+      try {
+        const userProfile = await userService.getUserProfile(user.uid);
+        if (userProfile?.location) {
+          const userLocation = userService.convertToGeoPoint(userProfile.location);
+          setCenter(userLocation);
+        } else {
+          // Fallback to NYC if user has no location set
+          setCenter(new GeoPoint(40.7128, -74.0060));
+        }
+      } catch (error) {
+        console.error('Failed to get user location:', error);
+        // Fallback to NYC on error
+        setCenter(new GeoPoint(40.7128, -74.0060));
+      }
+    };
+
+    getCurrentUserLocation();
+  }, [user]);
 
   useEffect(() => {
     const load = async () => {
-      if (!user) return;
+      if (!user || !center) return;
       setLoading(true);
       try {
         // Load musicians
@@ -83,7 +105,12 @@ const Discover = () => {
         setMusicians(musiciansWithLocations);
       } catch (e) {
         console.error('Failed to load musicians', e);
-        toast({ title: 'Could not load musicians', variant: 'destructive' });
+        console.error('Error details:', e);
+        toast({
+          title: 'Could not load musicians',
+          description: `Error: ${(e as Error).message}`,
+          variant: 'destructive'
+        });
       } finally {
         setLoading(false);
       }
