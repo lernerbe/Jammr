@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Music } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { userService } from "@/services/userService";
+import { geocodingService } from "@/services/geocodingService";
 import { GeoPoint } from "firebase/firestore";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
@@ -49,18 +50,37 @@ const Discover = () => {
 
         setRequestedUsers(requestedUserIds);
 
-        setMusicians(visible.map((p: any) => ({
-          id: p.user_id,
-          name: p.name,
-          instrument: p.instrument,
-          genres: p.genres,
-          skillLevel: p.skill_level,
-          location: "",
-          distance: (p as any).distance,
-          imageUrl: p.image_url,
-          bio: p.bio,
-          requested: requestedUserIds.has(p.user_id),
-        })));
+        // Convert coordinates to place names for all musicians
+        const musiciansWithLocations = await Promise.all(
+          visible.map(async (p: any) => {
+            let locationName = "";
+            try {
+              locationName = await geocodingService.getPlaceNameFromCoordinates(
+                p.location.latitude,
+                p.location.longitude
+              );
+            } catch (error) {
+              console.error('Error converting coordinates to place name:', error);
+              // Fallback to coordinates if geocoding fails
+              locationName = `${p.location.latitude.toFixed(2)}, ${p.location.longitude.toFixed(2)}`;
+            }
+            
+            return {
+              id: p.user_id,
+              name: p.name,
+              instrument: p.instrument,
+              genres: p.genres,
+              skillLevel: p.skill_level,
+              location: locationName,
+              distance: (p as any).distance,
+              imageUrl: p.image_url,
+              bio: p.bio,
+              requested: requestedUserIds.has(p.user_id),
+            };
+          })
+        );
+        
+        setMusicians(musiciansWithLocations);
       } catch (e) {
         console.error('Failed to load musicians', e);
         toast({ title: 'Could not load musicians', variant: 'destructive' });

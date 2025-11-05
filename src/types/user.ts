@@ -1,5 +1,14 @@
 import { GeoPoint } from 'firebase/firestore';
 
+export interface LocationData {
+  location: string;
+  coords: {
+    lat: number;
+    lng: number;
+  };
+  place_id: string;
+}
+
 export interface UserProfile {
   user_id: string;
   name: string;
@@ -7,7 +16,7 @@ export interface UserProfile {
   genres: string[];
   skill_level: 'Beginner' | 'Intermediate' | 'Advanced';
   bio: string;
-  location: GeoPoint;
+  location: LocationData | GeoPoint; // Support both old and new formats
   audio_clips: string[];
   image_url?: string; // Optional field
   image_gallery?: string[]; // Optional list of gallery image URLs
