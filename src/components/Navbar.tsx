@@ -9,6 +9,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { SimpleThemeToggle } from "@/components/ThemeToggle";
 
 const Navbar = () => {
   const location = useLocation();
@@ -37,9 +38,10 @@ const Navbar = () => {
             </span>
           </Link>
 
-          {/* User Menu */}
-          {user && (
-            <div className="flex items-center gap-4">
+          {/* User Menu and Theme Toggle */}
+          <div className="flex items-center gap-2">
+            <SimpleThemeToggle />
+            {user && (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="ghost" className="relative h-8 w-8 rounded-full">
@@ -58,8 +60,8 @@ const Navbar = () => {
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
-            </div>
-          )}
+            )}
+          </div>
         </nav>
       </header>
 
