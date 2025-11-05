@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useRef } from "react";
 import { useLocation } from "react-router-dom";
 import { MessageCircle, Send } from "lucide-react";
 import { Card } from "@/components/ui/card";
@@ -18,6 +18,7 @@ const Messages = () => {
   const [text, setText] = useState("");
   const [userProfiles, setUserProfiles] = useState<Record<string, UserProfile>>({});
   const [loading, setLoading] = useState(true);
+  const fetchedChatsRef = useRef<Set<string>>(new Set());
 
   // Load chats and user profiles - only depends on user, not URL params
   useEffect(() => {
@@ -95,41 +96,54 @@ const Messages = () => {
       const params = new URLSearchParams(location.search);
       const qChatId = params.get('chatId');
       if (!qChatId) return;
-      if (!chats.some(c => c.id === qChatId)) {
-        console.log('Chat not found in list, fetching:', qChatId);
-        try {
-          const chat = await userService.getChatById(qChatId);
-          if (chat && Array.isArray(chat.participants) && chat.participants.includes(user.uid)) {
-            console.log('Adding new chat to list:', chat);
-            setChats(prev => [{ id: chat.id, ...chat }, ...prev]);
-            setActiveChatId(qChatId);
 
-            // Load profiles for new chat participants
-            const newParticipantIds = chat.participants.filter((id: string) => id !== user.uid && !userProfiles[id]);
-            if (newParticipantIds.length > 0) {
-              const newProfilePromises = newParticipantIds.map(async (userId: string) => {
-                const profile = await userService.getUserProfile(userId);
-                return { userId, profile };
-              });
+      // Check if we've already fetched this chat or if it's already in the list
+      if (fetchedChatsRef.current.has(qChatId) || chats.some(c => c.id === qChatId)) {
+        return;
+      }
 
-              const newProfileResults = await Promise.all(newProfilePromises);
-              const newProfilesMap: Record<string, UserProfile> = {};
-              newProfileResults.forEach(({ userId, profile }) => {
-                if (profile) {
-                  newProfilesMap[userId] = profile;
-                }
-              });
+      console.log('Chat not found in list, fetching:', qChatId);
+      fetchedChatsRef.current.add(qChatId); // Mark as being fetched
 
-              setUserProfiles(prev => ({ ...prev, ...newProfilesMap }));
+      try {
+        const chat = await userService.getChatById(qChatId);
+        if (chat && Array.isArray(chat.participants) && chat.participants.includes(user.uid)) {
+          console.log('Adding new chat to list:', chat);
+          setChats(prev => {
+            // Final check to prevent duplicates
+            if (prev.some(c => c.id === qChatId)) {
+              return prev;
             }
+            return [{ id: chat.id, ...chat }, ...prev];
+          });
+          setActiveChatId(qChatId);
+
+          // Load profiles for new chat participants
+          const newParticipantIds = chat.participants.filter((id: string) => id !== user.uid && !userProfiles[id]);
+          if (newParticipantIds.length > 0) {
+            const newProfilePromises = newParticipantIds.map(async (userId: string) => {
+              const profile = await userService.getUserProfile(userId);
+              return { userId, profile };
+            });
+
+            const newProfileResults = await Promise.all(newProfilePromises);
+            const newProfilesMap: Record<string, UserProfile> = {};
+            newProfileResults.forEach(({ userId, profile }) => {
+              if (profile) {
+                newProfilesMap[userId] = profile;
+              }
+            });
+
+            setUserProfiles(prev => ({ ...prev, ...newProfilesMap }));
           }
-        } catch (error) {
-          console.error('Error fetching chat:', error);
         }
+      } catch (error) {
+        console.error('Error fetching chat:', error);
+        fetchedChatsRef.current.delete(qChatId); // Remove from fetched set on error
       }
     };
     syncActive();
-  }, [location.search, chats, user]);
+  }, [location.search, user, chats, userProfiles]); // Added back dependencies but with better duplicate prevention
 
   const send = async () => {
     if (!user || !activeChatId || !text.trim()) {
