@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Music } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { userService } from "@/services/userService";
+import { geocodingService } from "@/services/geocodingService";
 import { GeoPoint } from "firebase/firestore";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";

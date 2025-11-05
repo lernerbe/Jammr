@@ -17,8 +17,11 @@ import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { userService } from "@/services/userService";
+import { geocodingService } from "@/services/geocodingService";
 import { UserProfile } from "@/types/user";
 import { GeoPoint } from "firebase/firestore";
+import { LocationAutocomplete } from "@/components/LocationAutocomplete";
+import { LocationData } from "@/types/user";
 
 const Profile = () => {
   const { toast } = useToast();
@@ -43,6 +46,8 @@ const Profile = () => {
     imageGallery: [] as string[],
     videoClips: [] as string[],
   });
+  const [selectedLocation, setSelectedLocation] = useState<LocationData | null>(null);
+  const [locationLoading, setLocationLoading] = useState(false);
 
   const handleProfileImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!user) return;
@@ -136,6 +141,11 @@ const Profile = () => {
     }
   };
 
+  const handleLocationSelect = (locationData: LocationData) => {
+    setSelectedLocation(locationData);
+    setProfile(prev => ({ ...prev, location: locationData.location }));
+  };
+
   // Load user profile from Firestore
   useEffect(() => {
     const loadProfile = async () => {
@@ -145,17 +155,95 @@ const Profile = () => {
       try {
         const userProfile = await userService.getUserProfile(user.uid);
         if (userProfile) {
-          setProfile({
-            name: userProfile.name,
-            instrument: userProfile.instrument,
-            skillLevel: userProfile.skill_level,
-            bio: userProfile.bio,
-            location: `${userProfile.location.latitude}, ${userProfile.location.longitude}`, // Simplified for now
-            selectedGenres: userProfile.genres,
-            imageUrl: userProfile.image_url || user?.photoURL || "",
-            imageGallery: userProfile.image_gallery || [],
-            videoClips: userProfile.video_clips || [],
-          });
+          // Handle new location format
+          if (typeof userProfile.location === 'object' && 'location' in userProfile.location) {
+            // New format: { location: string, coords: {lat, lng}, place_id: string }
+            const locationData = userProfile.location as LocationData;
+            setProfile({
+              name: userProfile.name,
+              instrument: userProfile.instrument,
+              skillLevel: userProfile.skill_level,
+              bio: userProfile.bio,
+              location: locationData.location,
+              selectedGenres: userProfile.genres,
+              imageUrl: userProfile.image_url || user?.photoURL || "",
+              imageGallery: userProfile.image_gallery || [],
+              videoClips: userProfile.video_clips || [],
+            });
+            setSelectedLocation(locationData);
+          } else if (userProfile.location && typeof userProfile.location === 'object' && 'latitude' in userProfile.location) {
+            // Old format: GeoPoint - convert to new format
+            const geoPoint = userProfile.location as GeoPoint;
+            setLocationLoading(true);
+            try {
+              const placeName = await geocodingService.getPlaceNameFromCoordinates(
+                geoPoint.latitude,
+                geoPoint.longitude
+              );
+              
+              const locationData: LocationData = {
+                location: placeName,
+                coords: {
+                  lat: geoPoint.latitude,
+                  lng: geoPoint.longitude,
+                },
+                place_id: geocodingService.generatePlaceId(),
+              };
+              
+              setProfile({
+                name: userProfile.name,
+                instrument: userProfile.instrument,
+                skillLevel: userProfile.skill_level,
+                bio: userProfile.bio,
+                location: placeName,
+                selectedGenres: userProfile.genres,
+                imageUrl: userProfile.image_url || user?.photoURL || "",
+                imageGallery: userProfile.image_gallery || [],
+                videoClips: userProfile.video_clips || [],
+              });
+              setSelectedLocation(locationData);
+            } catch (error) {
+              console.error('Error converting coordinates to place name:', error);
+              // Fallback to coordinates if geocoding fails
+              const locationData: LocationData = {
+                location: `${geoPoint.latitude.toFixed(2)}, ${geoPoint.longitude.toFixed(2)}`,
+                coords: {
+                  lat: geoPoint.latitude,
+                  lng: geoPoint.longitude,
+                },
+                place_id: geocodingService.generatePlaceId(),
+              };
+              
+              setProfile({
+                name: userProfile.name,
+                instrument: userProfile.instrument,
+                skillLevel: userProfile.skill_level,
+                bio: userProfile.bio,
+                location: locationData.location,
+                selectedGenres: userProfile.genres,
+                imageUrl: userProfile.image_url || user?.photoURL || "",
+                imageGallery: userProfile.image_gallery || [],
+                videoClips: userProfile.video_clips || [],
+              });
+              setSelectedLocation(locationData);
+            } finally {
+              setLocationLoading(false);
+            }
+          } else {
+            // No location data
+            setProfile({
+              name: userProfile.name,
+              instrument: userProfile.instrument,
+              skillLevel: userProfile.skill_level,
+              bio: userProfile.bio,
+              location: "",
+              selectedGenres: userProfile.genres,
+              imageUrl: userProfile.image_url || user?.photoURL || "",
+              imageGallery: userProfile.image_gallery || [],
+              videoClips: userProfile.video_clips || [],
+            });
+            setSelectedLocation(null);
+          }
         } else {
           // Set default values from Firebase Auth
           setProfile(prev => ({
@@ -231,18 +319,23 @@ const Profile = () => {
   const handleSave = async () => {
     if (!user) return;
     
+    if (!selectedLocation) {
+      toast({
+        title: "Location required",
+        description: "Please select a location from the suggestions.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
     setSaving(true);
     try {
-      // For now, use a default location (New York coordinates)
-      // TODO: Implement geolocation service
-      const defaultLocation = new GeoPoint(40.7128, -74.0060);
-      
       const profileData: Partial<UserProfile> = {
         name: profile.name,
         instrument: profile.instrument,
         skill_level: profile.skillLevel,
         bio: profile.bio,
-        location: defaultLocation,
+        location: selectedLocation,
         genres: profile.selectedGenres,
         visibility: true,
         audio_clips: [],
@@ -338,7 +431,9 @@ const Profile = () => {
                       <Music2 className="h-4 w-4" />
                       {profile.instrument} • {profile.skillLevel}
                     </p>
-                    <p className="text-sm text-muted-foreground mt-1">{profile.location}</p>
+                    <p className="text-sm text-muted-foreground mt-1">
+                      {locationLoading ? "Loading location..." : profile.location}
+                    </p>
                   </div>
                 </div>
 
@@ -441,14 +536,14 @@ const Profile = () => {
                     />
                   </div>
 
-                  <div className="space-y-2">
-                    <Label htmlFor="location">Location</Label>
-                    <Input
-                      id="location"
-                      value={profile.location}
-                      onChange={(e) => setProfile({ ...profile, location: e.target.value })}
-                    />
-                  </div>
+                  <LocationAutocomplete
+                    value={profile.location}
+                    onChange={(value) => setProfile({ ...profile, location: value })}
+                    onLocationSelect={handleLocationSelect}
+                    placeholder="Enter your city, state, country"
+                    label="Location"
+                    required
+                  />
 
                   <div className="space-y-2">
                     <Label htmlFor="instrument">Primary Instrument</Label>
