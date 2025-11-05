@@ -297,6 +297,51 @@ export const userService = {
     return users.sort((a, b) => (a as any).distance - (b as any).distance);
   },
 
+  // in userService (next to getNearbyUsers)
+  subscribeToNearbyUsers(
+    userLocation: GeoPoint,
+    filters: FilterOptions = {},
+    maxDistance: number = 25,
+    callback: (users: (UserProfile & { distance: number })[]) => void,
+    onError?: (err: any) => void
+  ): () => void {
+    const usersRef = collection(db, USERS_COLLECTION);
+    // base query: visible users. Keep it simple so it works with client-side distance/filter.
+    const q = query(usersRef, where('visibility', '==', true), limit(50));
+    const unsub = onSnapshot(q, (snapshot) => {
+      const users: (UserProfile & { distance: number })[] = [];
+
+      snapshot.forEach((docSnap) => {
+        const data = docSnap.data();
+        const userProfile: UserProfile = {
+          ...data,
+          created_at: data.created_at?.toDate ? data.created_at.toDate() : data.created_at,
+        } as UserProfile;
+
+        // apply same filters as getNearbyUsers
+        if (filters.instrument && userProfile.instrument !== filters.instrument) return;
+        if (filters.genres && filters.genres.length > 0) {
+          const hasMatchingGenre = userProfile.genres.some((genre) =>
+            filters.genres!.includes(genre)
+          );
+          if (!hasMatchingGenre) return;
+        }
+        if (filters.skillLevel && userProfile.skill_level !== filters.skillLevel) return;
+
+        const distance = this.calculateDistance(userLocation, userProfile.location);
+        if (distance <= maxDistance) {
+          users.push({ ...(userProfile as any), distance });
+        }
+      });
+
+      // sort by distance
+      users.sort((a, b) => (a as any).distance - (b as any).distance);
+      callback(users);
+    }, onError);
+
+    return unsub;
+  },
+
   // Upload audio clip
   async uploadAudioClip(userId: string, file: File): Promise<string> {
     const audioRef = ref(storage, `audio-clips/${userId}/${Date.now()}-${file.name}`);
@@ -372,4 +417,18 @@ export const userService = {
   toRadians(degrees: number): number {
     return degrees * (Math.PI / 180);
   },
+
+  onUserProfileSnapshot(userId: string, onUpdate: (data: any | null) => void, onError?: (err: any) => void) {
+    const ref = doc(db, "users", userId); // adjust path if different
+    const unsubscribe = onSnapshot(ref, (snap) => {
+      if (!snap.exists()) {
+        onUpdate(null);
+        return;
+      }
+      onUpdate(snap.data());
+    }, onError);
+    return unsubscribe;
+  }
 };
+
+

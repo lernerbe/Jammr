@@ -269,6 +269,53 @@ const Profile = () => {
     loadProfile();
   }, [user, toast]);
 
+  useEffect(() => {
+    if (!user) return;
+
+    setLoading(true);
+    // subscribe to real-time updates for the user's profile
+    const unsubscribe = userService.onUserProfileSnapshot(
+      user.uid,
+      (userProfile) => {
+        if (userProfile) {
+          setProfile(prev => ({
+            // merge with prev to avoid accidentally dropping fields
+            ...prev,
+            name: userProfile.name || prev.name,
+            instrument: userProfile.instrument || prev.instrument,
+            skillLevel: userProfile.skill_level || prev.skillLevel,
+            bio: userProfile.bio || prev.bio,
+            location: userProfile.location
+              ? `${userProfile.location.latitude}, ${userProfile.location.longitude}`
+              : prev.location,
+            selectedGenres: userProfile.genres || prev.selectedGenres,
+            imageUrl: userProfile.image_url || user?.photoURL || prev.imageUrl,
+            imageGallery: userProfile.image_gallery || prev.imageGallery,
+            videoClips: userProfile.video_clips || prev.videoClips,
+          }));
+        } else {
+          setProfile(prev => ({
+            ...prev,
+            name: user.displayName || user.email?.split('@')[0] || prev.name,
+            imageUrl: user.photoURL || prev.imageUrl,
+          }));
+        }
+        setLoading(false);
+      },
+      (error) => {
+        console.error('Error listening to profile:', error);
+        toast({
+          title: "Error loading profile",
+          description: "Could not load your profile data.",
+          variant: "destructive",
+        });
+        setLoading(false);
+      }
+    );
+
+    return () => unsubscribe();
+  }, [user, toast]);
+
   const handleSave = async () => {
     if (!user) return;
     
