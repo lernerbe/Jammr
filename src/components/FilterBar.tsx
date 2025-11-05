@@ -112,7 +112,9 @@ const FilterBar = ({ onFilterChange }: FilterBarProps) => {
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
                   <Label>Distance</Label>
-                  <span className="text-sm text-muted-foreground">{distance[0]} miles</span>
+                  <span className="text-sm text-muted-foreground">
+                    {distance[0] === 100 ? 'unlimited' : `${distance[0]} miles`}
+                  </span>
                 </div>
                 <Slider
                   value={distance}
@@ -144,7 +146,7 @@ const FilterBar = ({ onFilterChange }: FilterBarProps) => {
                 instrument: instrument && instrument !== 'all instruments' ? instrument.charAt(0).toUpperCase() + instrument.slice(1) : undefined,
                 skillLevel,
                 genres: selectedGenres,
-                distance: distance[0],
+                distance: distance[0] === 100 ? 999999 : distance[0],
               })}>Apply Filters</Button>
             </div>
           </SheetContent>
