@@ -44,21 +44,42 @@ const FilterBar = ({ onFilterChange }: FilterBarProps) => {
   const [selectedGenres, setSelectedGenres] = React.useState<string[]>([]);
   const [instrument, setInstrument] = React.useState<string | undefined>(undefined);
   const [skillLevel, setSkillLevel] = React.useState<string | undefined>(undefined);
+  const [searchQuery, setSearchQuery] = React.useState("");
 
   const toggleGenre = (genre: string) => {
     setSelectedGenres((prev) =>
       prev.includes(genre) ? prev.filter((g) => g !== genre) : [...prev, genre]
     );
   };
+  
+  const formatInstrument = (raw?: string) =>
+    raw && raw !== 'all instruments' ? raw.charAt(0).toUpperCase() + raw.slice(1) : undefined;
+
+  const formatSkill = (raw?: string) => (raw ? raw.charAt(0).toUpperCase() + raw.slice(1) : undefined);
 
   return (
     <div className="w-full space-y-4">
       <div className="flex gap-3">
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+        <div className="relative flex-none w-full sm:w-1/2 flex items-center">
+          <Button
+            variant="ghost"
+            size="icon"
+            className="absolute left-2 top-1/2 -translate-y-1/2 text-muted-foreground"
+            onClick={() => onFilterChange?.({ instrument: formatInstrument(instrument), skillLevel: formatSkill(skillLevel), genres: selectedGenres, distance: distance[0], searchQuery })}
+            aria-label="Search"
+          >
+          <Search className="h-4 w-4" />
+          </Button>
           <Input
             placeholder="Search musicians..."
             className="pl-10"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                onFilterChange?.({ instrument: formatInstrument(instrument), skillLevel: formatSkill(skillLevel), genres: selectedGenres, distance: distance[0], searchQuery });
+              }
+            }}
           />
         </div>
 
@@ -95,7 +116,7 @@ const FilterBar = ({ onFilterChange }: FilterBarProps) => {
 
               <div className="space-y-3">
                 <Label htmlFor="skill">Skill Level</Label>
-                <Select value={skillLevel} onValueChange={(v) => setSkillLevel(v === 'all levels' ? undefined : v.charAt(0).toUpperCase() + v.slice(1))}>
+                <Select value={skillLevel} onValueChange={(v) => setSkillLevel(v === 'all levels' ? undefined : v)}>
                   <SelectTrigger id="skill">
                     <SelectValue placeholder="Select skill level" />
                   </SelectTrigger>
@@ -143,8 +164,8 @@ const FilterBar = ({ onFilterChange }: FilterBarProps) => {
               </div>
 
               <Button className="w-full" onClick={() => onFilterChange?.({
-                instrument: instrument && instrument !== 'all instruments' ? instrument.charAt(0).toUpperCase() + instrument.slice(1) : undefined,
-                skillLevel,
+                instrument: formatInstrument(instrument),
+                skillLevel: formatSkill(skillLevel),
                 genres: selectedGenres,
                 distance: distance[0] === 100 ? 999999 : distance[0],
               })}>Apply Filters</Button>
