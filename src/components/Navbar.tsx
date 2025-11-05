@@ -30,7 +30,7 @@ const Navbar = () => {
       {/* Top Header - Logo and User Menu */}
       <header className="sticky top-0 z-50 w-full border-b border-border bg-background/95 backdrop-blur-md supports-[backdrop-filter]:bg-background/80">
         <nav className="container flex h-14 items-center justify-between px-4">
-          <Link to="/discover" className="flex items-center gap-2">
+          <Link to="/" className="flex items-center gap-2">
             <Music className="h-6 w-6 text-primary" />
             <span className="text-xl font-bold bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
               Jammr

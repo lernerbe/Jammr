@@ -41,10 +41,8 @@ interface FilterBarProps {
 
 const FilterBar = ({ onFilterChange }: FilterBarProps) => {
   const [distance, setDistance] = React.useState([25]);
-  const [searchQuery, setSearchQuery] = React.useState("");
   const [selectedGenres, setSelectedGenres] = React.useState<string[]>([]);
   const [instrument, setInstrument] = React.useState<string | undefined>(undefined);
-  // skillLevel stores the raw value matching SelectItem values (lowercase), e.g. 'beginner'
   const [skillLevel, setSkillLevel] = React.useState<string | undefined>(undefined);
 
   const toggleGenre = (genre: string) => {
@@ -53,34 +51,14 @@ const FilterBar = ({ onFilterChange }: FilterBarProps) => {
     );
   };
 
-  const formatInstrument = (raw?: string) =>
-    raw && raw !== 'all instruments' ? raw.charAt(0).toUpperCase() + raw.slice(1) : undefined;
-
-  const formatSkill = (raw?: string) => (raw ? raw.charAt(0).toUpperCase() + raw.slice(1) : undefined);
-
   return (
     <div className="w-full space-y-4">
       <div className="flex gap-3">
-  <div className="relative flex-none w-full sm:w-1/2 flex items-center">
-          <Button
-            variant="ghost"
-            size="icon"
-            className="absolute left-2 top-1/2 -translate-y-1/2 text-muted-foreground"
-            onClick={() => onFilterChange?.({ instrument: formatInstrument(instrument), skillLevel: formatSkill(skillLevel), genres: selectedGenres, distance: distance[0], searchQuery })}
-            aria-label="Search"
-          >
-            <Search className="h-4 w-4" />
-          </Button>
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
             placeholder="Search musicians..."
             className="pl-10"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') {
-                onFilterChange?.({ instrument: formatInstrument(instrument), skillLevel: formatSkill(skillLevel), genres: selectedGenres, distance: distance[0], searchQuery });
-              }
-            }}
           />
         </div>
 
@@ -117,7 +95,7 @@ const FilterBar = ({ onFilterChange }: FilterBarProps) => {
 
               <div className="space-y-3">
                 <Label htmlFor="skill">Skill Level</Label>
-                <Select value={skillLevel} onValueChange={(v) => setSkillLevel(v === 'all levels' ? undefined : v)}>
+                <Select value={skillLevel} onValueChange={(v) => setSkillLevel(v === 'all levels' ? undefined : v.charAt(0).toUpperCase() + v.slice(1))}>
                   <SelectTrigger id="skill">
                     <SelectValue placeholder="Select skill level" />
                   </SelectTrigger>
@@ -163,8 +141,8 @@ const FilterBar = ({ onFilterChange }: FilterBarProps) => {
               </div>
 
               <Button className="w-full" onClick={() => onFilterChange?.({
-                instrument: formatInstrument(instrument),
-                skillLevel: formatSkill(skillLevel),
+                instrument: instrument && instrument !== 'all instruments' ? instrument.charAt(0).toUpperCase() + instrument.slice(1) : undefined,
+                skillLevel,
                 genres: selectedGenres,
                 distance: distance[0],
               })}>Apply Filters</Button>
