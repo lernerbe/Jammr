@@ -25,85 +25,71 @@ const Discover = () => {
   const center = useMemo(() => new GeoPoint(40.7128, -74.0060), []);
 
   useEffect(() => {
-    if (!user) return;
-    setLoading(true);
+    const load = async () => {
+      if (!user) return;
+      setLoading(true);
+      try {
+        // Load musicians
+        const list = await userService.getNearbyUsers(center, {
+          instrument: filters.instrument,
+          genres: filters.genres,
+          skillLevel: filters.skillLevel,
+        }, filters.distance || 25);
+        // Exclude current user
+        const visible = list.filter((p: any) => p.user_id !== user?.uid);
 
-    // subscribe to nearby users
-    const unsubscribe = userService.subscribeToNearbyUsers(
-      center,
-      {
-        instrument: filters.instrument,
-        genres: filters.genres,
-        skillLevel: filters.skillLevel,
-      },
-      filters.distance || 25,
-      (userProfiles) => {
-        // Exclude current logged-in user
-        const visible = userProfiles.filter(p => p.user_id !== user.uid);
+        // Load all existing requests to check which users have already been requested
+        const allRequests = await userService.getAllRequestsForUser(user.uid);
+        const requestedUserIds = new Set<string>();
 
-        // Map to UI shape
-        setMusicians(visible.map((p: any) => ({
-          id: p.user_id,
-          name: p.name,
-          instrument: p.instrument,
-          genres: p.genres,
-          skillLevel: p.skill_level,
-          location: "",
-          distance: p.distance,
-          imageUrl: p.image_url,
-          bio: p.bio,
-          requested: requestedUsers.has(p.user_id),
-        })));
-
-        // searchQuery filter: NEEDS TESTING OR MODIFICATIONS!!
-          let mapped = visible.map((p: any) => ({
-            id: p.user_id,
-            name: p.name,
-            instrument: p.instrument,
-            genres: p.genres,
-            skillLevel: p.skill_level,
-            location: "",
-            distance: p.distance,
-            imageUrl: p.image_url,
-            bio: p.bio,
-            requested: requestedUsers.has(p.user_id),
-          }));
-
-          // Apply searchQuery filter (match words in the user's name)
-          if (filters?.searchQuery) {
-            const query = String(filters.searchQuery).toLowerCase().trim();
-            const tokens = query.split(/\s+/).filter(Boolean);
-            if (tokens.length > 0) {
-              mapped = mapped.filter((m) => {
-                const name = (m.name || "").toLowerCase();
-                // require that every token appears somewhere in the name
-                return tokens.every((t) => name.includes(t));
-              });
-            }
+        allRequests.forEach((req: any) => {
+          if (req.requester_id === user.uid) {
+            requestedUserIds.add(req.receiver_id);
           }
-          setMusicians(mapped);
+        });
 
-        setLoading(false);
-      },
-      (err) => {
-        console.error('subscribeToNearbyUsers error', err);
+        setRequestedUsers(requestedUserIds);
+
+        // Convert coordinates to place names for all musicians
+        const musiciansWithLocations = await Promise.all(
+          visible.map(async (p: any) => {
+            let locationName = "";
+            try {
+              locationName = await geocodingService.getPlaceNameFromCoordinates(
+                p.location.latitude,
+                p.location.longitude
+              );
+            } catch (error) {
+              console.error('Error converting coordinates to place name:', error);
+              // Fallback to coordinates if geocoding fails
+              locationName = `${p.location.latitude.toFixed(2)}, ${p.location.longitude.toFixed(2)}`;
+            }
+            
+            return {
+              id: p.user_id,
+              name: p.name,
+              instrument: p.instrument,
+              genres: p.genres,
+              skillLevel: p.skill_level,
+              location: locationName,
+              distance: (p as any).distance,
+              imageUrl: p.image_url,
+              bio: p.bio,
+              requested: requestedUserIds.has(p.user_id),
+            };
+          })
+        );
+        
+        setMusicians(musiciansWithLocations);
+      } catch (e) {
+        console.error('Failed to load musicians', e);
         toast({ title: 'Could not load musicians', variant: 'destructive' });
+      } finally {
         setLoading(false);
       }
-    );
-
-    // Load requests once (you can also subscribe if needed)
-    (async () => {
-      const allRequests = await userService.getAllRequestsForUser(user.uid);
-      const requestedUserIds = new Set<string>();
-      allRequests.forEach((req: any) => {
-        if (req.requester_id === user.uid) requestedUserIds.add(req.receiver_id);
-      });
-      setRequestedUsers(requestedUserIds);
-    })();
-
-    return () => unsubscribe();
-  }, [center, filters, toast, user?.uid]); // keep same array deps
+    };
+    load();
+  }, [center, filters, toast, user?.uid]);
 
   const handleRequestChat = async (receiverId: string) => {
     if (!user) return;
@@ -163,7 +149,7 @@ const Discover = () => {
             </p>
           </div>
         ) : (
-          <> 
+          <>
             <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
               {musicians.map((musician, index) => (
                 <div
