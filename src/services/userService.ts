@@ -154,26 +154,19 @@ export const userService = {
     const [u1, u2] = [userA, userB].sort();
     const chatId = `${u1}_${u2}`;
     const chatRef = doc(db, CHATS_COLLECTION, chatId);
-    try {
-      // Check if chat already exists first
-      const chatSnap = await getDoc(chatRef);
-      if (chatSnap.exists()) {
-        console.log('Chat already exists:', chatId);
-        return chatId;
-      }
 
-      // Create new chat
-      console.log('Creating new chat:', chatId);
+    try {
+      // Create/update the chat with merge: true to handle existing chats
       await setDoc(chatRef, {
         participants: [u1, u2],
         created_at: Timestamp.now(),
         last_message: '',
         last_message_at: null
-      }, { merge: false });
-      console.log('Chat created successfully:', chatId);
+      }, { merge: true });
+
     } catch (e) {
-      console.log('Error creating chat (may already exist):', e);
-      // If the doc already exists or update is restricted by rules, proceed with chatId
+      console.error('Error in createOrGetChat:', e);
+      throw e;
     }
     return chatId;
   },
