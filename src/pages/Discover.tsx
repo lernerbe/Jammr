@@ -16,6 +16,7 @@ const Discover = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const [musicians, setMusicians] = useState<any[]>([]);
+  const [filteredMusicians, setFilteredMusicians] = useState<any[]>([]);
   const [filters, setFilters] = useState<any>({});
   const [requestedUsers, setRequestedUsers] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
@@ -118,6 +119,32 @@ const Discover = () => {
     load();
   }, [center, filters, toast, user?.uid]);
 
+  // Filter musicians based on search query and other filters
+  useEffect(() => {
+    if (!musicians.length) {
+      setFilteredMusicians([]);
+      return;
+    }
+
+    let filtered = [...musicians];
+
+    // Apply search query filter
+    if (filters.searchQuery) {
+      const query = filters.searchQuery.toLowerCase();
+      filtered = filtered.filter((musician) => {
+        return (
+          musician.name.toLowerCase().includes(query) ||
+          musician.instrument.toLowerCase().includes(query) ||
+          musician.bio.toLowerCase().includes(query) ||
+          musician.genres.some((genre: string) => genre.toLowerCase().includes(query)) ||
+          musician.location.toLowerCase().includes(query)
+        );
+      });
+    }
+
+    setFilteredMusicians(filtered);
+  }, [musicians, filters.searchQuery]);
+
   const handleRequestChat = async (receiverId: string) => {
     if (!user) return;
 
@@ -178,7 +205,7 @@ const Discover = () => {
         ) : (
           <>
             <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
-              {musicians.map((musician, index) => (
+              {filteredMusicians.map((musician, index) => (
                 <div
                   key={musician.id}
                   className="animate-fade-in"
@@ -193,10 +220,10 @@ const Discover = () => {
               ))}
             </div>
 
-            {musicians.length === 0 && (
+            {filteredMusicians.length === 0 && (
               <div className="text-center py-20">
                 <p className="text-xl text-muted-foreground">
-                  No musicians found matching your filters
+                  {filters.searchQuery ? 'No musicians found matching your search' : 'No musicians found matching your filters'}
                 </p>
               </div>
             )}

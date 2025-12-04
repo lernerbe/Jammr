@@ -44,12 +44,24 @@ const FilterBar = ({ onFilterChange }: FilterBarProps) => {
   const [selectedGenres, setSelectedGenres] = React.useState<string[]>([]);
   const [instrument, setInstrument] = React.useState<string | undefined>(undefined);
   const [skillLevel, setSkillLevel] = React.useState<string | undefined>(undefined);
+  const [searchQuery, setSearchQuery] = React.useState<string>("");
 
   const toggleGenre = (genre: string) => {
     setSelectedGenres((prev) =>
       prev.includes(genre) ? prev.filter((g) => g !== genre) : [...prev, genre]
     );
   };
+
+  // Apply filters whenever any filter changes, including search
+  React.useEffect(() => {
+    onFilterChange?.({
+      searchQuery: searchQuery.trim(),
+      instrument: instrument && instrument !== 'all instruments' ? instrument.charAt(0).toUpperCase() + instrument.slice(1) : undefined,
+      skillLevel,
+      genres: selectedGenres,
+      distance: distance[0] === 100 ? 999999 : distance[0],
+    });
+  }, [searchQuery, instrument, skillLevel, selectedGenres, distance, onFilterChange]);
 
   return (
     <div className="w-full space-y-4">
@@ -59,6 +71,8 @@ const FilterBar = ({ onFilterChange }: FilterBarProps) => {
           <Input
             placeholder="Search musicians..."
             className="pl-10"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
           />
         </div>
 
@@ -142,18 +156,13 @@ const FilterBar = ({ onFilterChange }: FilterBarProps) => {
                 </div>
               </div>
 
-              <Button className="w-full" onClick={() => onFilterChange?.({
-                instrument: instrument && instrument !== 'all instruments' ? instrument.charAt(0).toUpperCase() + instrument.slice(1) : undefined,
-                skillLevel,
-                genres: selectedGenres,
-                distance: distance[0] === 100 ? 999999 : distance[0],
-              })}>Apply Filters</Button>
             </div>
           </SheetContent>
         </Sheet>
       </div>
 
-      <div className="flex gap-2 flex-wrap">
+      <div className="flex gap-2 flex-wrap items-center">
+        <Label className="text-sm font-medium text-muted-foreground">Sort by:</Label>
         <Select defaultValue="distance">
           <SelectTrigger className="w-[140px]">
             <SelectValue />

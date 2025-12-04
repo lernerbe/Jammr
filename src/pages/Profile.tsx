@@ -362,12 +362,7 @@ const Profile = () => {
           {!isEditing ? (
             // Read-only view - what others see
             <div className="space-y-6">
-              {/* Hero section */}
-              <div className="relative h-48 rounded-t-lg bg-gradient-to-r from-primary/20 via-primary/10 to-accent/20 overflow-hidden">
-                <div className="absolute inset-0 bg-[url('/waveform-bg.jpg')] bg-cover bg-center opacity-20" />
-              </div>
-
-              <Card className="p-8 -mt-24 relative z-10">
+              <Card className="p-8">
                 <div className="flex flex-col items-center gap-4 mb-6">
                   <Avatar className="h-32 w-32 border-4 border-background shadow-xl">
                     <AvatarImage src={profile.imageUrl} className="object-cover" />
