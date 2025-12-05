@@ -22,7 +22,8 @@ const Discover = () => {
   const [loading, setLoading] = useState(true);
   const [matchesDialogOpen, setMatchesDialogOpen] = useState(false);
   const [center, setCenter] = useState<GeoPoint | null>(null);
-
+  const [openMenu, setOpenMenu] = useState(false);
+  const [filtersMenuOpen, setFiltersMenuOpen] = useState(false);
   // Get current user's location
   useEffect(() => {
     const getCurrentUserLocation = async () => {
@@ -192,7 +193,7 @@ const Discover = () => {
           </Button>
         </div>
 
-        <FilterBar onFilterChange={setFilters} />
+        <FilterBar onFilterChange={setFilters} open={filtersMenuOpen} onOpenChange={setFiltersMenuOpen} />
         
         <MatchesDialog open={matchesDialogOpen} onOpenChange={setMatchesDialogOpen} />
 
@@ -225,10 +226,24 @@ const Discover = () => {
                 <p className="text-xl text-muted-foreground">
                   {filters.searchQuery ? 'No musicians found matching your search' : 'No musicians found matching your filters'}
                 </p>
-              </div>
-            )}
-          </>
-        )}
+                <div style={{ height: 16 }} />
+                <Button
+                  variant="outline"
+                  onClick={() => setFilters(prev => ({ ...prev, distance: 99999 }))}
+                >
+                  Browse out of range
+                </Button>
+                <p className="text-muted-foreground">or</p>
+                <Button
+                  variant="default"
+                  onClick={() => setFiltersMenuOpen(true)}
+                >
+                  Adjust range
+                </Button>
+                </div>
+              )}
+            </>
+          )}
       </div>
     </div>
   );
