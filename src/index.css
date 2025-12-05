@@ -99,6 +99,8 @@ All colors MUST be HSL.
     padding-top: calc(env(safe-area-inset-top, 0px) + 8px);
     /* Smooth theme transitions */
     transition: background-color 0.3s ease, color 0.3s ease;
+    /* Reserve space for scrollbar to prevent layout shift when dropdowns open */
+    scrollbar-gutter: stable;
   }
 
   h1, h2, h3, h4, h5, h6 {
