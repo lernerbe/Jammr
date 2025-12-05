@@ -59,7 +59,7 @@ const MusicianCard = ({ musician, onRequestChat, onViewProfile }: MusicianCardPr
         )}
         <div className="absolute inset-0 gradient-overlay opacity-0 group-hover:opacity-100 transition-opacity" />
         <div className="absolute top-3 right-3">
-          <Badge variant="secondary" className="bg-background/80 backdrop-blur-sm">
+          <Badge variant="secondary" className="bg-background/90 backdrop-blur-sm border border-border/50 text-foreground font-medium">
             {Math.round(musician.distance)} mi
           </Badge>
         </div>

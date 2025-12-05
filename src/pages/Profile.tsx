@@ -34,6 +34,16 @@ const Profile = () => {
   const instruments = ["Guitar", "Bass", "Drums", "Piano", "Vocals", "Saxophone", "Violin"];
   const skillLevels = ["Beginner", "Intermediate", "Advanced"];
   const genres = ["Rock", "Jazz", "Blues", "Pop", "Metal", "Classical", "Electronic", "Hip Hop"];
+  const lookingForOptions = [
+    "Band Members",
+    "Jam Sessions",
+    "Songwriting Partners",
+    "Producer for Tracks",
+    "Recording / Studio Collabs",
+    "Live Performance Opportunities",
+    "Casual / Social Jamming",
+    "Remote Collaboration"
+  ];
 
   const [profile, setProfile] = useState({
     name: user?.displayName || "",
@@ -42,6 +52,7 @@ const Profile = () => {
     bio: "",
     location: "New York, NY",
     selectedGenres: [] as string[],
+    lookingFor: [] as string[],
     imageUrl: user?.photoURL || "",
     imageGallery: [] as string[],
     videoClips: [] as string[],
@@ -146,6 +157,15 @@ const Profile = () => {
     setProfile(prev => ({ ...prev, location: locationData.location }));
   };
 
+  const toggleLookingFor = (option: string) => {
+    setProfile(prev => ({
+      ...prev,
+      lookingFor: prev.lookingFor.includes(option)
+        ? prev.lookingFor.filter((item) => item !== option)
+        : [...prev.lookingFor, option]
+    }));
+  };
+
   // Load user profile from Firestore
   useEffect(() => {
     const loadProfile = async () => {
@@ -166,6 +186,7 @@ const Profile = () => {
               bio: userProfile.bio,
               location: locationData.location,
               selectedGenres: userProfile.genres,
+              lookingFor: userProfile.looking_for || [],
               imageUrl: userProfile.image_url || user?.photoURL || "",
               imageGallery: userProfile.image_gallery || [],
               videoClips: userProfile.video_clips || [],
@@ -197,6 +218,7 @@ const Profile = () => {
                 bio: userProfile.bio,
                 location: placeName,
                 selectedGenres: userProfile.genres,
+                lookingFor: userProfile.looking_for || [],
                 imageUrl: userProfile.image_url || user?.photoURL || "",
                 imageGallery: userProfile.image_gallery || [],
                 videoClips: userProfile.video_clips || [],
@@ -221,6 +243,7 @@ const Profile = () => {
                 bio: userProfile.bio,
                 location: locationData.location,
                 selectedGenres: userProfile.genres,
+                lookingFor: userProfile.looking_for || [],
                 imageUrl: userProfile.image_url || user?.photoURL || "",
                 imageGallery: userProfile.image_gallery || [],
                 videoClips: userProfile.video_clips || [],
@@ -238,6 +261,7 @@ const Profile = () => {
               bio: userProfile.bio,
               location: "",
               selectedGenres: userProfile.genres,
+              lookingFor: userProfile.looking_for || [],
               imageUrl: userProfile.image_url || user?.photoURL || "",
               imageGallery: userProfile.image_gallery || [],
               videoClips: userProfile.video_clips || [],
@@ -290,6 +314,7 @@ const Profile = () => {
         bio: profile.bio,
         location: selectedLocation,
         genres: profile.selectedGenres,
+        looking_for: profile.lookingFor,
         visibility: true,
         audio_clips: [],
         ...(user.photoURL && { image_url: user.photoURL }), // Only include if photoURL exists
@@ -393,6 +418,20 @@ const Profile = () => {
                       {profile.selectedGenres.map((genre) => (
                         <Badge key={genre} variant="secondary">
                           {genre}
+                        </Badge>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Looking For */}
+                {profile.lookingFor.length > 0 && (
+                  <div className="mb-6">
+                    <h3 className="text-sm font-semibold mb-3 text-muted-foreground">LOOKING FOR</h3>
+                    <div className="flex flex-wrap gap-2">
+                      {profile.lookingFor.map((item) => (
+                        <Badge key={item} variant="secondary">
+                          {item}
                         </Badge>
                       ))}
                     </div>
@@ -563,6 +602,23 @@ const Profile = () => {
                         }}
                       >
                         {genre}
+                      </Badge>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Looking For */}
+                <div className="space-y-3">
+                  <Label>Looking For (click to toggle)</Label>
+                  <div className="flex flex-wrap gap-2">
+                    {lookingForOptions.map((option) => (
+                      <Badge
+                        key={option}
+                        variant={profile.lookingFor.includes(option) ? "default" : "outline"}
+                        className="cursor-pointer"
+                        onClick={() => toggleLookingFor(option)}
+                      >
+                        {option}
                       </Badge>
                     ))}
                   </div>

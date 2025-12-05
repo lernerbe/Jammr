@@ -99,6 +99,20 @@ All colors MUST be HSL.
     padding-top: calc(env(safe-area-inset-top, 0px) + 8px);
     /* Smooth theme transitions */
     transition: background-color 0.3s ease, color 0.3s ease;
+    /* Prevent scrollbar flickering that causes page shifts */
+    overflow-y: scroll;
+    /* Hide scrollbar for cleaner look */
+    scrollbar-width: none; /* Firefox */
+    -ms-overflow-style: none; /* Internet Explorer 10+ */
+  }
+
+  body::-webkit-scrollbar {
+    display: none; /* Safari and Chrome */
+  }
+
+  html {
+    /* Alternative approach to prevent layout shifts from scrollbars */
+    scrollbar-gutter: stable;
   }
 
   h1, h2, h3, h4, h5, h6 {
