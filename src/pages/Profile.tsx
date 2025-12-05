@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useSearchParams } from "react-router-dom";
 import { Camera, Music2, Upload, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -26,6 +27,7 @@ import { LocationData } from "@/types/user";
 const Profile = () => {
   const { toast } = useToast();
   const { user } = useAuth();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [isEditing, setIsEditing] = useState(false);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -112,6 +114,7 @@ const Profile = () => {
       const existing = await userService.getUserProfile(user.uid);
       const nextList = [...(existing?.image_gallery || []), url];
       await userService.createOrUpdateProfile(user.uid, { image_gallery: nextList });
+      setProfile(prev => ({ ...prev, imageGallery: nextList }));
       toast({ title: "Image added to gallery" });
     } catch (error) {
       console.error('Gallery image upload failed', error);
@@ -174,7 +177,18 @@ const Profile = () => {
       setLoading(true);
       try {
         const userProfile = await userService.getUserProfile(user.uid);
+        // Check if this is a new account (query parameter from signup)
+        const isNewAccount = searchParams.get('new') === 'true';
+        
+        // Auto-enable edit mode only for new accounts
+        if (isNewAccount) {
+          setIsEditing(true);
+          // Remove the query parameter so it doesn't persist
+          setSearchParams({}, { replace: true });
+        }
+        
         if (userProfile) {
+
           // Handle new location format
           if (typeof userProfile.location === 'object' && 'location' in userProfile.location) {
             // New format: { location: string, coords: {lat, lng}, place_id: string }
@@ -269,7 +283,8 @@ const Profile = () => {
             setSelectedLocation(null);
           }
         } else {
-          // Set default values from Firebase Auth
+          // No profile exists yet - set default values from Firebase Auth
+          // Edit mode will be enabled if isNewAccount is true (handled above)
           setProfile(prev => ({
             ...prev,
             name: user.displayName || user.email?.split('@')[0] || "",

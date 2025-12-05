@@ -37,9 +37,11 @@ const skillLevels = ["All Levels", "Beginner", "Intermediate", "Advanced"];
 
 interface FilterBarProps {
   onFilterChange?: (filters: any) => void;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
 }
 
-const FilterBar = ({ onFilterChange }: FilterBarProps) => {
+const FilterBar = ({ onFilterChange, open, onOpenChange }: FilterBarProps) => {
   const [distance, setDistance] = React.useState([25]);
   const [selectedGenres, setSelectedGenres] = React.useState<string[]>([]);
   const [instrument, setInstrument] = React.useState<string | undefined>(undefined);
@@ -76,7 +78,7 @@ const FilterBar = ({ onFilterChange }: FilterBarProps) => {
           />
         </div>
 
-        <Sheet>
+        <Sheet open={open} onOpenChange={onOpenChange}>
           <SheetTrigger asChild>
             <Button variant="outline" size="icon">
               <SlidersHorizontal className="h-4 w-4" />

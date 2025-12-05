@@ -82,7 +82,7 @@ const Signup = () => {
         title: "Account created!",
         description: "Welcome to Jammr! Please complete your profile.",
       });
-      navigate("/profile");
+      navigate("/profile?new=true");
     } catch (error: any) {
       toast({
         title: "Sign up failed",
@@ -134,7 +134,7 @@ const Signup = () => {
         title: "Welcome!",
         description: "You've successfully signed up with Google. Please complete your profile.",
       });
-      navigate("/profile");
+      navigate("/profile?new=true");
     } catch (error: any) {
       toast({
         title: "Google sign up failed",
