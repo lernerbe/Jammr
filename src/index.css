@@ -93,27 +93,46 @@ All colors MUST be HSL.
     @apply border-border;
   }
 
-  body {
+  html, body {
     @apply bg-background text-foreground font-sans antialiased;
-    /* Ensure content clears iPhone notch/status bar when installed as a PWA */
-    padding-top: calc(env(safe-area-inset-top, 0px) + 8px);
     /* Smooth theme transitions */
     transition: background-color 0.3s ease, color 0.3s ease;
-    /* Prevent scrollbar flickering that causes page shifts */
-    overflow-y: scroll;
-    /* Hide scrollbar for cleaner look */
-    scrollbar-width: none; /* Firefox */
-    -ms-overflow-style: none; /* Internet Explorer 10+ */
+    
+    /* Scrollbar stability fixes - prevent layout shifts */
+    overflow-x: hidden; /* Prevent horizontal scroll */
+    width: 100%;
+    
+    /* CRITICAL: Prevent Radix UI from adding padding when locking scroll */
+    padding-right: 0 !important;
+    margin-right: 0 !important;
+    
+    /* Hide scrollbar visually but keep track space */
+    scrollbar-width: none;
+    -ms-overflow-style: none;
   }
 
+  /* Ensure forced overrides for Radix scroll locking states */
+  html[data-scroll-locked],
+  body[data-scroll-locked] {
+    padding-right: 0 !important;
+    overflow: hidden !important; /* Let Radix lock, but we control padding */
+  }
+  
+  #root {
+    /* Ensure content clears iPhone notch/status bar when installed as a PWA */
+    padding-top: calc(env(safe-area-inset-top, 0px) + 8px);
+    min-height: 100vh;
+    width: 100%;
+  }
+  
+  /* Hide webkit scrollbar */
+  html::-webkit-scrollbar,
   body::-webkit-scrollbar {
-    display: none; /* Safari and Chrome */
+    display: none;
+    width: 0;
+    background: transparent;
   }
 
-  html {
-    /* Alternative approach to prevent layout shifts from scrollbars */
-    scrollbar-gutter: stable;
-  }
 
   h1, h2, h3, h4, h5, h6 {
     @apply font-semibold tracking-tight;
