@@ -54,7 +54,7 @@ const Profile = () => {
   "Other",
 ];
   const skillLevels = ["Beginner", "Intermediate", "Advanced"];
-  const genres = ["Rock", "Jazz", "Blues", "Pop", "Folk", "Indie", "Metal", "Classical", "Electronic", "Hip Hop"];
+  const genres = ["Rock", "Jazz", "Blues", "Pop", "Folk", "Indie", "Soul", "RnB", "Metal", "Classical", "Electronic", "Hip Hop", "World"];
   const lookingForOptions = [
     "Band Members",
     "Jam Sessions",

@@ -41,7 +41,7 @@ const instruments = [
   "Other",
 ];
 
-const genres = ["Rock", "Jazz", "Blues", "Pop", "Folk", "Indie", "Metal", "Classical", "Electronic", "Hip Hop"];
+const genres = ["Rock", "Jazz", "Blues", "Pop", "Folk", "Indie", "Soul", "RnB", "Metal", "Classical", "Electronic", "Hip Hop", "World"];
 const skillLevels = ["All Levels", "Beginner", "Intermediate", "Advanced"];
 
 interface FilterBarProps {
