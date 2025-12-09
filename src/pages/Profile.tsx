@@ -33,9 +33,28 @@ const Profile = () => {
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
 
-  const instruments = ["Guitar", "Bass", "Drums", "Piano", "Vocals", "Saxophone", "Violin"];
+  const instruments = [
+  "All Instruments",
+  "Guitar",
+  "Bass",
+  "Drums",
+  "Piano",
+  "Vocals",
+  "Violin",
+  "Viola",
+  "Cello",
+  "Trumpet",
+  "Trombone",
+  "Flute",
+  "Saxophone",
+  "Clarinet",
+  "Oboe",
+  "Banjo",
+  "Accordion",
+  "Other",
+];
   const skillLevels = ["Beginner", "Intermediate", "Advanced"];
-  const genres = ["Rock", "Jazz", "Blues", "Pop", "Metal", "Classical", "Electronic", "Hip Hop"];
+  const genres = ["Rock", "Jazz", "Blues", "Pop", "Folk", "Indie", "Metal", "Classical", "Electronic", "Hip Hop"];
   const lookingForOptions = [
     "Band Members",
     "Jam Sessions",

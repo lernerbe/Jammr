@@ -27,12 +27,21 @@ const instruments = [
   "Drums",
   "Piano",
   "Vocals",
-  "Saxophone",
   "Violin",
+  "Viola",
+  "Cello",
+  "Trumpet",
+  "Trombone",
+  "Flute",
+  "Saxophone",
+  "Clarinet",
+  "Oboe",
+  "Banjo",
+  "Accordion",
   "Other",
 ];
 
-const genres = ["Rock", "Jazz", "Blues", "Pop", "Metal", "Classical", "Electronic", "Hip Hop"];
+const genres = ["Rock", "Jazz", "Blues", "Pop", "Folk", "Indie", "Metal", "Classical", "Electronic", "Hip Hop"];
 const skillLevels = ["All Levels", "Beginner", "Intermediate", "Advanced"];
 
 interface FilterBarProps {
