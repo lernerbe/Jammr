@@ -78,15 +78,25 @@ const Discover = () => {
         const musiciansWithLocations = await Promise.all(
           visible.map(async (p: any) => {
             let locationName = "";
-            try {
-              locationName = await geocodingService.getPlaceNameFromCoordinates(
-                p.location.latitude,
-                p.location.longitude
-              );
-            } catch (error) {
-              console.error('Error converting coordinates to place name:', error);
-              // Fallback to coordinates if geocoding fails
-              locationName = `${p.location.latitude.toFixed(2)}, ${p.location.longitude.toFixed(2)}`;
+            const loc = p.location;
+
+            if (loc && typeof loc === 'object' && 'location' in loc) {
+              // New LocationData format - use the stored string directly
+              locationName = loc.location;
+            } else if (loc && typeof loc === 'object' && 'latitude' in loc) {
+              // Old GeoPoint format - reverse geocode
+              try {
+                locationName = await geocodingService.getPlaceNameFromCoordinates(
+                  loc.latitude,
+                  loc.longitude
+                );
+              } catch (error) {
+                console.error('Error converting coordinates to place name:', error);
+                // Fallback to coordinates if geocoding fails
+                locationName = `${loc.latitude.toFixed(2)}, ${loc.longitude.toFixed(2)}`;
+              }
+            } else {
+              locationName = "Unknown Location";
             }
             
             return {
