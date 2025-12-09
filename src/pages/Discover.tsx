@@ -100,6 +100,7 @@ const Discover = () => {
               imageUrl: p.image_url,
               bio: p.bio,
               requested: requestedUserIds.has(p.user_id),
+              created_at: p.created_at,
             };
           })
         );
@@ -143,8 +144,41 @@ const Discover = () => {
       });
     }
 
+    // Apply sorting
+    if (filters.sortBy) {
+      switch (filters.sortBy) {
+        case 'recent':
+          filtered.sort((a, b) => {
+            const dateA = a.created_at instanceof Date ? a.created_at.getTime() : 0;
+            const dateB = b.created_at instanceof Date ? b.created_at.getTime() : 0;
+            return dateB - dateA;
+          });
+          break;
+        case 'match':
+          // Sort by number of matching genres if genres filter is active
+          if (filters.genres && filters.genres.length > 0) {
+            filtered.sort((a, b) => {
+              const aMatches = a.genres.filter((g: string) => filters.genres.includes(g)).length;
+              const bMatches = b.genres.filter((g: string) => filters.genres.includes(g)).length;
+              if (aMatches !== bMatches) return bMatches - aMatches;
+              return a.distance - b.distance;
+            });
+          } else {
+            // Default to distance if no specific criteria for match
+            filtered.sort((a, b) => a.distance - b.distance);
+          }
+          break;
+        case 'distance':
+        default:
+          filtered.sort((a, b) => a.distance - b.distance);
+          break;
+      }
+    } else {
+      filtered.sort((a, b) => a.distance - b.distance);
+    }
+
     setFilteredMusicians(filtered);
-  }, [musicians, filters.searchQuery]);
+  }, [musicians, filters.searchQuery, filters.sortBy, filters.genres]);
 
   const handleRequestChat = async (receiverId: string) => {
     if (!user) return;

@@ -3,7 +3,6 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { useNavigate } from "react-router-dom";
 
 interface MusicianCardProps {
   musician: {
@@ -23,7 +22,6 @@ interface MusicianCardProps {
 }
 
 const MusicianCard = ({ musician, onRequestChat, onViewProfile }: MusicianCardProps) => {
-  const navigate = useNavigate();
   const initials = musician.name
     .split(" ")
     .map((n) => n[0])
@@ -44,27 +42,7 @@ const MusicianCard = ({ musician, onRequestChat, onViewProfile }: MusicianCardPr
   };
 
   return (
-    <Card className="overflow-hidden hover-lift cursor-pointer group" onClick={() => navigate(`/profile/${musician.id}`)}>
-      <div className="relative h-48 bg-gradient-to-br from-primary/20 to-secondary/20 overflow-hidden">
-        {musician.imageUrl ? (
-          <img
-            src={musician.imageUrl}
-            alt={musician.name}
-            className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
-          />
-        ) : (
-          <div className="w-full h-full flex items-center justify-center">
-            <Music2 className="h-20 w-20 text-primary/40" />
-          </div>
-        )}
-        <div className="absolute inset-0 gradient-overlay opacity-0 group-hover:opacity-100 transition-opacity" />
-        <div className="absolute top-3 right-3">
-          <Badge variant="secondary" className="bg-background/90 backdrop-blur-sm border border-border/50 text-foreground font-medium">
-            {Math.round(musician.distance)} mi
-          </Badge>
-        </div>
-      </div>
-
+    <Card className="overflow-hidden group">
       <div className="p-5 space-y-4">
         <div className="flex items-start gap-3">
           <Avatar className="h-12 w-12 border-2 border-primary/20">
@@ -74,7 +52,12 @@ const MusicianCard = ({ musician, onRequestChat, onViewProfile }: MusicianCardPr
             </AvatarFallback>
           </Avatar>
           <div className="flex-1 min-w-0">
-            <h3 className="font-semibold text-lg truncate">{musician.name}</h3>
+            <div className="flex justify-between items-start">
+              <h3 className="font-semibold text-lg truncate pr-2">{musician.name}</h3>
+              <Badge variant="secondary" className="shrink-0 text-xs">
+                {Math.round(musician.distance)} mi
+              </Badge>
+            </div>
             <p className="text-sm text-muted-foreground flex items-center gap-1">
               <MapPin className="h-3 w-3" />
               {musician.location}
@@ -122,13 +105,13 @@ const MusicianCard = ({ musician, onRequestChat, onViewProfile }: MusicianCardPr
             className="flex-1"
             onClick={(e) => {
               e.stopPropagation();
-              onRequestChat?.(musician.id);
+              musician.requested ? null : onRequestChat?.(musician.id);
             }}
             disabled={musician.requested}
             variant={musician.requested ? 'outline' : 'default'}
           >
             {musician.requested ? 'Requested' : 'Request to Chat'}
-          </Button>
+          </Button>``
         </div>
       </div>
     </Card>

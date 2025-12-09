@@ -47,6 +47,7 @@ const FilterBar = ({ onFilterChange, open, onOpenChange }: FilterBarProps) => {
   const [instrument, setInstrument] = React.useState<string | undefined>(undefined);
   const [skillLevel, setSkillLevel] = React.useState<string | undefined>(undefined);
   const [searchQuery, setSearchQuery] = React.useState<string>("");
+  const [sortBy, setSortBy] = React.useState<string>("distance");
 
   const toggleGenre = (genre: string) => {
     setSelectedGenres((prev) =>
@@ -62,8 +63,9 @@ const FilterBar = ({ onFilterChange, open, onOpenChange }: FilterBarProps) => {
       skillLevel,
       genres: selectedGenres,
       distance: distance[0] === 100 ? 999999 : distance[0],
+      sortBy,
     });
-  }, [searchQuery, instrument, skillLevel, selectedGenres, distance, onFilterChange]);
+  }, [searchQuery, instrument, skillLevel, selectedGenres, distance, sortBy, onFilterChange]);
 
   return (
     <div className="w-full space-y-4">
@@ -165,7 +167,7 @@ const FilterBar = ({ onFilterChange, open, onOpenChange }: FilterBarProps) => {
 
       <div className="flex gap-2 flex-wrap items-center">
         <Label className="text-sm font-medium text-muted-foreground">Sort by:</Label>
-        <Select defaultValue="distance">
+        <Select value={sortBy} onValueChange={setSortBy}>
           <SelectTrigger className="w-[140px]">
             <SelectValue />
           </SelectTrigger>
