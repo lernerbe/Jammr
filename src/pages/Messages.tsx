@@ -59,6 +59,12 @@ const Messages = () => {
           }
         });
 
+        // Also load the current user's profile for their own avatar
+        const currentUserProfile = await userService.getUserProfile(user.uid);
+        if (currentUserProfile) {
+          profilesMap[user.uid] = currentUserProfile;
+        }
+
         setUserProfiles(profilesMap);
       } catch (error) {
         console.error('Error loading chats:', error);
@@ -169,6 +175,14 @@ const Messages = () => {
               }
             });
 
+            // Ensure current user's profile is also available
+            if (!userProfiles[user.uid]) {
+              const currentUserProfile = await userService.getUserProfile(user.uid);
+              if (currentUserProfile) {
+                newProfilesMap[user.uid] = currentUserProfile;
+              }
+            }
+
             setUserProfiles(prev => ({ ...prev, ...newProfilesMap }));
           }
         }
@@ -220,6 +234,10 @@ const Messages = () => {
 
   const handleAcceptRequest = async (id: string, name: string) => {
     try {
+      // Find the request to get the requester_id
+      const request = pendingRequests.find(r => r.id === id);
+      if (!request) return;
+
       const chatId = await userService.acceptMatchRequest(id);
       toast({
         title: "Request Accepted!",
@@ -230,6 +248,15 @@ const Messages = () => {
       // Reload chats to include the new chat
       const cs = await userService.getUserChats(user!.uid);
       setChats(cs);
+
+      // Load the accepted user's profile into userProfiles state
+      const requesterProfile = await userService.getUserProfile(request.requester_id);
+      if (requesterProfile) {
+        setUserProfiles(prev => ({
+          ...prev,
+          [request.requester_id]: requesterProfile
+        }));
+      }
 
       // Set the new chat as active
       setActiveChatId(chatId);
