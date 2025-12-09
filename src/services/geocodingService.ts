@@ -173,6 +173,10 @@ export const geocodingService = {
 
   // Convert coordinates to place name using reverse geocoding (for backward compatibility)
   async getPlaceNameFromCoordinates(latitude: number, longitude: number): Promise<string> {
+    if (typeof latitude !== 'number' || typeof longitude !== 'number') {
+      return "Unknown Location";
+    }
+
     try {
       const response = await fetch(
         `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${latitude}&longitude=${longitude}&localityLanguage=en`
