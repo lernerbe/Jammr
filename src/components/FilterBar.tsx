@@ -97,7 +97,7 @@ const FilterBar = ({ onFilterChange, open, onOpenChange }: FilterBarProps) => {
             <div className="space-y-6 mt-6">
               <div className="space-y-3">
                 <Label htmlFor="instrument">Instrument</Label>
-                <Select value={instrument} onValueChange={(v) => setInstrument(v === 'all instruments' ? undefined : v)}>
+                <Select value={instrument || ''} onValueChange={(v) => setInstrument(v)}>
                   <SelectTrigger id="instrument">
                     <SelectValue placeholder="Select instrument" />
                   </SelectTrigger>
@@ -113,7 +113,7 @@ const FilterBar = ({ onFilterChange, open, onOpenChange }: FilterBarProps) => {
 
               <div className="space-y-3">
                 <Label htmlFor="skill">Skill Level</Label>
-                <Select value={skillLevel} onValueChange={(v) => setSkillLevel(v === 'all levels' ? undefined : v)}>
+                <Select value={skillLevel || ''} onValueChange={(v) => setSkillLevel(v)}>
                   <SelectTrigger id="skill">
                     <SelectValue placeholder="Select skill level" />
                   </SelectTrigger>
