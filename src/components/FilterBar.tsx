@@ -60,7 +60,7 @@ const FilterBar = ({ onFilterChange, open, onOpenChange }: FilterBarProps) => {
     onFilterChange?.({
       searchQuery: searchQuery.trim(),
       instrument: instrument && instrument !== 'all instruments' ? instrument.charAt(0).toUpperCase() + instrument.slice(1) : undefined,
-      skillLevel,
+      skillLevel: skillLevel && skillLevel !== 'all levels' ? skillLevel.charAt(0).toUpperCase() + skillLevel.slice(1) : undefined,
       genres: selectedGenres,
       distance: distance[0] === 100 ? 999999 : distance[0],
       sortBy,
@@ -113,7 +113,7 @@ const FilterBar = ({ onFilterChange, open, onOpenChange }: FilterBarProps) => {
 
               <div className="space-y-3">
                 <Label htmlFor="skill">Skill Level</Label>
-                <Select value={skillLevel} onValueChange={(v) => setSkillLevel(v === 'all levels' ? undefined : v.charAt(0).toUpperCase() + v.slice(1))}>
+                <Select value={skillLevel} onValueChange={(v) => setSkillLevel(v === 'all levels' ? undefined : v)}>
                   <SelectTrigger id="skill">
                     <SelectValue placeholder="Select skill level" />
                   </SelectTrigger>

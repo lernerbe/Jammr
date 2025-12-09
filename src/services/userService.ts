@@ -254,13 +254,30 @@ export const userService = {
     console.log('getNearbyUsers called with:', { userLocation, filters, maxDistance });
 
     const usersRef = collection(db, USERS_COLLECTION);
-    let q = query(
-      usersRef,
-      where('visibility', '==', true),
-      limit(50) // Firestore limit
-    );
+    
+    // Build query constraints dynamically
+    const constraints: any[] = [
+      where('visibility', '==', true)
+    ];
 
-    console.log('Executing Firestore query...');
+    if (filters.instrument) {
+      constraints.push(where('instrument', '==', filters.instrument));
+    }
+
+    if (filters.skillLevel) {
+      constraints.push(where('skill_level', '==', filters.skillLevel));
+    }
+
+    if (filters.genres && filters.genres.length > 0) {
+      constraints.push(where('genres', 'array-contains-any', filters.genres));
+    }
+
+    // Add limit last
+    constraints.push(limit(100));
+
+    let q = query(usersRef, ...constraints);
+
+    console.log('Executing Firestore query with constraints:', constraints.length);
     const querySnapshot = await getDocs(q);
     const users: UserProfile[] = [];
 

@@ -111,7 +111,7 @@ const MusicianCard = ({ musician, onRequestChat, onViewProfile }: MusicianCardPr
             variant={musician.requested ? 'outline' : 'default'}
           >
             {musician.requested ? 'Requested' : 'Request to Chat'}
-          </Button>``
+          </Button>
         </div>
       </div>
     </Card>
