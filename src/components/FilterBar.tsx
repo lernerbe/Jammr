@@ -27,29 +27,54 @@ const instruments = [
   "Drums",
   "Piano",
   "Vocals",
-  "Saxophone",
   "Violin",
+  "Viola",
+  "Cello",
+  "Trumpet",
+  "Trombone",
+  "Flute",
+  "Saxophone",
+  "Clarinet",
+  "Oboe",
+  "Banjo",
+  "Accordion",
   "Other",
 ];
 
-const genres = ["Rock", "Jazz", "Blues", "Pop", "Metal", "Classical", "Electronic", "Hip Hop"];
+const genres = ["Rock", "Jazz", "Blues", "Pop", "Folk", "Indie", "Soul", "RnB", "Metal", "Classical", "Electronic", "Hip Hop", "World"];
 const skillLevels = ["All Levels", "Beginner", "Intermediate", "Advanced"];
 
 interface FilterBarProps {
   onFilterChange?: (filters: any) => void;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
 }
 
-const FilterBar = ({ onFilterChange }: FilterBarProps) => {
+const FilterBar = ({ onFilterChange, open, onOpenChange }: FilterBarProps) => {
   const [distance, setDistance] = React.useState([25]);
   const [selectedGenres, setSelectedGenres] = React.useState<string[]>([]);
   const [instrument, setInstrument] = React.useState<string | undefined>(undefined);
   const [skillLevel, setSkillLevel] = React.useState<string | undefined>(undefined);
+  const [searchQuery, setSearchQuery] = React.useState<string>("");
+  const [sortBy, setSortBy] = React.useState<string>("distance");
 
   const toggleGenre = (genre: string) => {
     setSelectedGenres((prev) =>
       prev.includes(genre) ? prev.filter((g) => g !== genre) : [...prev, genre]
     );
   };
+
+  // Apply filters whenever any filter changes, including search
+  React.useEffect(() => {
+    onFilterChange?.({
+      searchQuery: searchQuery.trim(),
+      instrument: instrument && instrument !== 'all instruments' ? instrument.charAt(0).toUpperCase() + instrument.slice(1) : undefined,
+      skillLevel: skillLevel && skillLevel !== 'all levels' ? skillLevel.charAt(0).toUpperCase() + skillLevel.slice(1) : undefined,
+      genres: selectedGenres,
+      distance: distance[0] === 100 ? 999999 : distance[0],
+      sortBy,
+    });
+  }, [searchQuery, instrument, skillLevel, selectedGenres, distance, sortBy, onFilterChange]);
 
   return (
     <div className="w-full space-y-4">
@@ -59,10 +84,12 @@ const FilterBar = ({ onFilterChange }: FilterBarProps) => {
           <Input
             placeholder="Search musicians..."
             className="pl-10"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
           />
         </div>
 
-        <Sheet>
+        <Sheet open={open} onOpenChange={onOpenChange}>
           <SheetTrigger asChild>
             <Button variant="outline" size="icon">
               <SlidersHorizontal className="h-4 w-4" />
@@ -79,7 +106,7 @@ const FilterBar = ({ onFilterChange }: FilterBarProps) => {
             <div className="space-y-6 mt-6">
               <div className="space-y-3">
                 <Label htmlFor="instrument">Instrument</Label>
-                <Select value={instrument} onValueChange={(v) => setInstrument(v === 'all instruments' ? undefined : v)}>
+                <Select value={instrument || ''} onValueChange={(v) => setInstrument(v)}>
                   <SelectTrigger id="instrument">
                     <SelectValue placeholder="Select instrument" />
                   </SelectTrigger>
@@ -95,7 +122,7 @@ const FilterBar = ({ onFilterChange }: FilterBarProps) => {
 
               <div className="space-y-3">
                 <Label htmlFor="skill">Skill Level</Label>
-                <Select value={skillLevel} onValueChange={(v) => setSkillLevel(v === 'all levels' ? undefined : v.charAt(0).toUpperCase() + v.slice(1))}>
+                <Select value={skillLevel || ''} onValueChange={(v) => setSkillLevel(v)}>
                   <SelectTrigger id="skill">
                     <SelectValue placeholder="Select skill level" />
                   </SelectTrigger>
@@ -112,7 +139,9 @@ const FilterBar = ({ onFilterChange }: FilterBarProps) => {
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
                   <Label>Distance</Label>
-                  <span className="text-sm text-muted-foreground">{distance[0]} miles</span>
+                  <span className="text-sm text-muted-foreground">
+                    {distance[0] === 100 ? 'unlimited' : `${distance[0]} miles`}
+                  </span>
                 </div>
                 <Slider
                   value={distance}
@@ -140,19 +169,14 @@ const FilterBar = ({ onFilterChange }: FilterBarProps) => {
                 </div>
               </div>
 
-              <Button className="w-full" onClick={() => onFilterChange?.({
-                instrument: instrument && instrument !== 'all instruments' ? instrument.charAt(0).toUpperCase() + instrument.slice(1) : undefined,
-                skillLevel,
-                genres: selectedGenres,
-                distance: distance[0],
-              })}>Apply Filters</Button>
             </div>
           </SheetContent>
         </Sheet>
       </div>
 
-      <div className="flex gap-2 flex-wrap">
-        <Select defaultValue="distance">
+      <div className="flex gap-2 flex-wrap items-center">
+        <Label className="text-sm font-medium text-muted-foreground">Sort by:</Label>
+        <Select value={sortBy} onValueChange={setSortBy}>
           <SelectTrigger className="w-[140px]">
             <SelectValue />
           </SelectTrigger>

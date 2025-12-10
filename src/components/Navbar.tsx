@@ -9,6 +9,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { SimpleThemeToggle } from "@/components/ThemeToggle";
 
 const Navbar = () => {
   const location = useLocation();
@@ -30,17 +31,18 @@ const Navbar = () => {
       {/* Top Header - Logo and User Menu */}
       <header className="sticky top-0 z-50 w-full border-b border-border bg-background/95 backdrop-blur-md supports-[backdrop-filter]:bg-background/80">
         <nav className="container flex h-14 items-center justify-between px-4">
-          <Link to="/" className="flex items-center gap-2">
+          <Link to={user ? "/discover" : "/"} className="flex items-center gap-2">
             <Music className="h-6 w-6 text-primary" />
             <span className="text-xl font-bold bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
               Jammr
             </span>
           </Link>
 
-          {/* User Menu */}
-          {user && (
-            <div className="flex items-center gap-4">
-              <DropdownMenu>
+          {/* User Menu and Theme Toggle */}
+          <div className="flex items-center gap-2">
+            <SimpleThemeToggle />
+            {user && (
+              <DropdownMenu modal={false}>
                 <DropdownMenuTrigger asChild>
                   <Button variant="ghost" className="relative h-8 w-8 rounded-full">
                     <Avatar className="h-8 w-8">
@@ -51,15 +53,15 @@ const Navbar = () => {
                     </Avatar>
                   </Button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent className="w-56" align="end" forceMount>
+                <DropdownMenuContent className="w-56" align="end">
                   <DropdownMenuItem onClick={handleLogout}>
                     <LogOut className="mr-2 h-4 w-4" />
                     <span>Log out</span>
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
-            </div>
-          )}
+            )}
+          </div>
         </nav>
       </header>
 

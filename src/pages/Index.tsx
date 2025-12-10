@@ -86,13 +86,6 @@ const Index = () => {
             </Link>
           </Button>
 
-          <div className="text-center">
-            <Button variant="link" size="sm" asChild>
-              <Link to="/discover" className="text-muted-foreground">
-                Browse musicians as guest
-              </Link>
-            </Button>
-          </div>
         </div>
 
         {/* Badge */}

@@ -23,6 +23,7 @@ export interface UserProfile {
   video_clips?: string[]; // Optional list of uploaded video URLs
   visibility: boolean;
   created_at: Date;
+  looking_for: string[];
 }
 
 export interface MatchRequest {

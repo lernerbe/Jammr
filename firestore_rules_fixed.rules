@@ -39,21 +39,29 @@ service cloud.firestore {
           && request.resource.data.participants.size() == 2;
       }
 
-      // Read existing chats only if participant - allow list queries
-      allow read: if authed();
+      // Allow reading chats if user is participant OR if checking for existence during creation
+      allow read: if authed() && (
+        (resource != null && isParticipantOnExisting()) ||
+        (resource == null)  // Allow reading non-existent docs for getDoc checks
+      );
+
+      // Allow list queries for authenticated users (getUserChats function)
+      allow list: if authed();
 
       // Create: must include participants[2] and created_at
       allow create: if isParticipantOnWrite()
         && request.resource.data.created_at is timestamp;
 
-      // Update: caller must already be a participant.
-      // Allow changing only safe, expected fields.
-      allow update: if isParticipantOnExisting()
-        && request.resource.data.diff(resource.data).changedKeys().hasOnly(
-             ['last_message', 'last_message_at', 'updated_at', 'typing']
-           )
-        && (!('updated_at' in request.resource.data)
-            || request.resource.data.updated_at is timestamp);
+      // Update: caller must already be a participant OR creating initial chat via merge
+      allow update: if (isParticipantOnExisting() &&
+          request.resource.data.diff(resource.data).changedKeys().hasOnly(
+               ['last_message', 'last_message_at', 'updated_at', 'typing']
+             )
+          && (!('updated_at' in request.resource.data)
+              || request.resource.data.updated_at is timestamp))
+        ||
+        // Allow update during chat creation with merge: true
+        (isParticipantOnWrite() && request.resource.data.created_at is timestamp);
 
       allow delete: if false;
 

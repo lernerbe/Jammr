@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useSearchParams } from "react-router-dom";
 import { Camera, Music2, Upload, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -26,14 +27,44 @@ import { LocationData } from "@/types/user";
 const Profile = () => {
   const { toast } = useToast();
   const { user } = useAuth();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [isEditing, setIsEditing] = useState(false);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
 
-  const instruments = ["Guitar", "Bass", "Drums", "Piano", "Vocals", "Saxophone", "Violin"];
+  const instruments = [
+  "All Instruments",
+  "Guitar",
+  "Bass",
+  "Drums",
+  "Piano",
+  "Vocals",
+  "Violin",
+  "Viola",
+  "Cello",
+  "Trumpet",
+  "Trombone",
+  "Flute",
+  "Saxophone",
+  "Clarinet",
+  "Oboe",
+  "Banjo",
+  "Accordion",
+  "Other",
+];
   const skillLevels = ["Beginner", "Intermediate", "Advanced"];
-  const genres = ["Rock", "Jazz", "Blues", "Pop", "Metal", "Classical", "Electronic", "Hip Hop"];
+  const genres = ["Rock", "Jazz", "Blues", "Pop", "Folk", "Indie", "Soul", "RnB", "Metal", "Classical", "Electronic", "Hip Hop", "World"];
+  const lookingForOptions = [
+    "Band Members",
+    "Jam Sessions",
+    "Songwriting Partners",
+    "Producer for Tracks",
+    "Recording / Studio Collabs",
+    "Live Performance Opportunities",
+    "Casual / Social Jamming",
+    "Remote Collaboration"
+  ];
 
   const [profile, setProfile] = useState({
     name: user?.displayName || "",
@@ -42,6 +73,7 @@ const Profile = () => {
     bio: "",
     location: "New York, NY",
     selectedGenres: [] as string[],
+    lookingFor: [] as string[],
     imageUrl: user?.photoURL || "",
     imageGallery: [] as string[],
     videoClips: [] as string[],
@@ -101,6 +133,7 @@ const Profile = () => {
       const existing = await userService.getUserProfile(user.uid);
       const nextList = [...(existing?.image_gallery || []), url];
       await userService.createOrUpdateProfile(user.uid, { image_gallery: nextList });
+      setProfile(prev => ({ ...prev, imageGallery: nextList }));
       toast({ title: "Image added to gallery" });
     } catch (error) {
       console.error('Gallery image upload failed', error);
@@ -146,6 +179,15 @@ const Profile = () => {
     setProfile(prev => ({ ...prev, location: locationData.location }));
   };
 
+  const toggleLookingFor = (option: string) => {
+    setProfile(prev => ({
+      ...prev,
+      lookingFor: prev.lookingFor.includes(option)
+        ? prev.lookingFor.filter((item) => item !== option)
+        : [...prev.lookingFor, option]
+    }));
+  };
+
   // Load user profile from Firestore
   useEffect(() => {
     const loadProfile = async () => {
@@ -154,7 +196,18 @@ const Profile = () => {
       setLoading(true);
       try {
         const userProfile = await userService.getUserProfile(user.uid);
+        // Check if this is a new account (query parameter from signup)
+        const isNewAccount = searchParams.get('new') === 'true';
+        
+        // Auto-enable edit mode only for new accounts
+        if (isNewAccount) {
+          setIsEditing(true);
+          // Remove the query parameter so it doesn't persist
+          setSearchParams({}, { replace: true });
+        }
+        
         if (userProfile) {
+
           // Handle new location format
           if (typeof userProfile.location === 'object' && 'location' in userProfile.location) {
             // New format: { location: string, coords: {lat, lng}, place_id: string }
@@ -166,6 +219,7 @@ const Profile = () => {
               bio: userProfile.bio,
               location: locationData.location,
               selectedGenres: userProfile.genres,
+              lookingFor: userProfile.looking_for || [],
               imageUrl: userProfile.image_url || user?.photoURL || "",
               imageGallery: userProfile.image_gallery || [],
               videoClips: userProfile.video_clips || [],
@@ -197,6 +251,7 @@ const Profile = () => {
                 bio: userProfile.bio,
                 location: placeName,
                 selectedGenres: userProfile.genres,
+                lookingFor: userProfile.looking_for || [],
                 imageUrl: userProfile.image_url || user?.photoURL || "",
                 imageGallery: userProfile.image_gallery || [],
                 videoClips: userProfile.video_clips || [],
@@ -221,6 +276,7 @@ const Profile = () => {
                 bio: userProfile.bio,
                 location: locationData.location,
                 selectedGenres: userProfile.genres,
+                lookingFor: userProfile.looking_for || [],
                 imageUrl: userProfile.image_url || user?.photoURL || "",
                 imageGallery: userProfile.image_gallery || [],
                 videoClips: userProfile.video_clips || [],
@@ -238,6 +294,7 @@ const Profile = () => {
               bio: userProfile.bio,
               location: "",
               selectedGenres: userProfile.genres,
+              lookingFor: userProfile.looking_for || [],
               imageUrl: userProfile.image_url || user?.photoURL || "",
               imageGallery: userProfile.image_gallery || [],
               videoClips: userProfile.video_clips || [],
@@ -245,7 +302,8 @@ const Profile = () => {
             setSelectedLocation(null);
           }
         } else {
-          // Set default values from Firebase Auth
+          // No profile exists yet - set default values from Firebase Auth
+          // Edit mode will be enabled if isNewAccount is true (handled above)
           setProfile(prev => ({
             ...prev,
             name: user.displayName || user.email?.split('@')[0] || "",
@@ -290,6 +348,7 @@ const Profile = () => {
         bio: profile.bio,
         location: selectedLocation,
         genres: profile.selectedGenres,
+        looking_for: profile.lookingFor,
         visibility: true,
         audio_clips: [],
         ...(user.photoURL && { image_url: user.photoURL }), // Only include if photoURL exists
@@ -362,12 +421,7 @@ const Profile = () => {
           {!isEditing ? (
             // Read-only view - what others see
             <div className="space-y-6">
-              {/* Hero section */}
-              <div className="relative h-48 rounded-t-lg bg-gradient-to-r from-primary/20 via-primary/10 to-accent/20 overflow-hidden">
-                <div className="absolute inset-0 bg-[url('/waveform-bg.jpg')] bg-cover bg-center opacity-20" />
-              </div>
-
-              <Card className="p-8 -mt-24 relative z-10">
+              <Card className="p-8">
                 <div className="flex flex-col items-center gap-4 mb-6">
                   <Avatar className="h-32 w-32 border-4 border-background shadow-xl">
                     <AvatarImage src={profile.imageUrl} className="object-cover" />
@@ -398,6 +452,20 @@ const Profile = () => {
                       {profile.selectedGenres.map((genre) => (
                         <Badge key={genre} variant="secondary">
                           {genre}
+                        </Badge>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Looking For */}
+                {profile.lookingFor.length > 0 && (
+                  <div className="mb-6">
+                    <h3 className="text-sm font-semibold mb-3 text-muted-foreground">LOOKING FOR</h3>
+                    <div className="flex flex-wrap gap-2">
+                      {profile.lookingFor.map((item) => (
+                        <Badge key={item} variant="secondary">
+                          {item}
                         </Badge>
                       ))}
                     </div>
@@ -568,6 +636,23 @@ const Profile = () => {
                         }}
                       >
                         {genre}
+                      </Badge>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Looking For */}
+                <div className="space-y-3">
+                  <Label>Looking For (click to toggle)</Label>
+                  <div className="flex flex-wrap gap-2">
+                    {lookingForOptions.map((option) => (
+                      <Badge
+                        key={option}
+                        variant={profile.lookingFor.includes(option) ? "default" : "outline"}
+                        className="cursor-pointer"
+                        onClick={() => toggleLookingFor(option)}
+                      >
+                        {option}
                       </Badge>
                     ))}
                   </div>
